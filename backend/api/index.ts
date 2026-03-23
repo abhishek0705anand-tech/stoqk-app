@@ -1,7 +1,8 @@
+import { Hono } from "hono";
 import { handle } from "hono/vercel";
-import app from "../src/app.js";
 
-// maxDuration requires Vercel Pro plan (10s on Hobby, 300s on Pro)
+const app = new Hono();
+app.get("/health", (c) => c.json({ ok: true }));
+
 export const config = { maxDuration: 60 };
-
 export default handle(app);
