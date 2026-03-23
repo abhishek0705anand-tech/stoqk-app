@@ -11,7 +11,14 @@ import briefsRoutes from "./routes/briefs.js";
 import patternsRoutes from "./routes/patterns.js";
 import internalRoutes from "./routes/internal.js";
 import newsRoutes from "./routes/news.js";
-import { mountInngest } from "./jobs/index.js";
+// Inngest mounted only outside Vercel (local dev via src/index.ts)
+// On Vercel, jobs are triggered via inngest.send() events from routes
+const isVercel = !!process.env.VERCEL;
+let mountInngest: ((app: ReturnType<typeof import("hono").Hono>) => void) | null = null;
+if (!isVercel) {
+  const jobsModule = await import("./jobs/index.js");
+  mountInngest = jobsModule.mountInngest;
+}
 
 const app = new Hono();
 
@@ -45,7 +52,7 @@ api.route("/news", newsRoutes);
 
 app.route("/api/v1", api);
 
-// Inngest webhook
-mountInngest(app);
+// Inngest webhook (local dev only)
+if (mountInngest) mountInngest(app);
 
 export default app;
