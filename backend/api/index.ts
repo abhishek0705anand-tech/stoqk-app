@@ -1,8 +1,7 @@
-import { Hono } from "hono";
-import { handle } from "hono/vercel";
-
-const app = new Hono();
-app.get("/health", (c) => c.json({ ok: true }));
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export const config = { maxDuration: 60 };
-export default handle(app);
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  res.status(200).json({ ok: true, ts: new Date().toISOString() });
+}
