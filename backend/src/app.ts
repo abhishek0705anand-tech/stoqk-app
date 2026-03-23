@@ -11,6 +11,7 @@ import briefsRoutes from "./routes/briefs.js";
 import patternsRoutes from "./routes/patterns.js";
 import internalRoutes from "./routes/internal.js";
 import newsRoutes from "./routes/news.js";
+import { authMiddleware } from "./middleware/auth.js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const { mountInngest } = await import("./jobs/index.js") as any;
 
@@ -34,6 +35,7 @@ app.get("/health", (c) => c.json({ ok: true, ts: new Date().toISOString() }));
 
 // API v1
 const api = new Hono();
+api.use("*", authMiddleware);
 api.route("/profile", profileRoutes);
 api.route("/holdings", holdingsRoutes);
 api.route("/signals", signalsRoutes);

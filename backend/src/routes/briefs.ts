@@ -5,7 +5,7 @@ const briefs = new Hono();
 
 // Today's brief for the user
 briefs.get("/today", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -47,7 +47,7 @@ briefs.get("/macro", async (c) => {
 
 // Historical briefs
 briefs.get("/history", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { data } = await supabase

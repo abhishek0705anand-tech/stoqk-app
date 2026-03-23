@@ -7,7 +7,7 @@ const holdings = new Hono();
 
 // List holdings with live prices
 holdings.get("/", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { data: userHoldings, error } = await supabase
@@ -43,7 +43,7 @@ holdings.get("/", async (c) => {
 
 // Add / update holding
 holdings.put("/", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { ticker, qty, avg_buy_price } = await c.req.json<{
@@ -72,7 +72,7 @@ holdings.put("/", async (c) => {
 
 // Delete holding
 holdings.delete("/:ticker", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const ticker = c.req.param("ticker").toUpperCase();
@@ -92,7 +92,7 @@ holdings.delete("/:ticker", async (c) => {
 
 // Bulk replace holdings
 holdings.post("/bulk", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { holdings: newHoldings } = await c.req.json<{

@@ -8,7 +8,7 @@ const profile = new Hono();
 
 // Complete onboarding — creates profile
 profile.post("/onboarding", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const answers = await c.req.json<OnboardingAnswers>();
@@ -35,7 +35,7 @@ profile.post("/onboarding", async (c) => {
 
 // Get own profile
 profile.get("/me", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { data, error } = await supabase
@@ -50,7 +50,7 @@ profile.get("/me", async (c) => {
 
 // Update profile fields
 profile.patch("/me", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const updates = await c.req.json();

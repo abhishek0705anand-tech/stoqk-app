@@ -6,13 +6,13 @@ final class APIClient: ObservableObject {
     static let shared = APIClient()
 
     private let baseURL: String
-    private var userId: String?
+    private var authToken: String?
 
     init(baseURL: String = "https://stoqk-app.vercel.app/api/v1") {
         self.baseURL = baseURL
     }
 
-    func setUserId(_ id: String) { self.userId = id }
+    func setAuthToken(_ token: String?) { self.authToken = token }
 
     private func request<T: Decodable>(
         _ path: String,
@@ -27,8 +27,8 @@ final class APIClient: ObservableObject {
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        if let userId {
-            req.setValue(userId, forHTTPHeaderField: "x-user-id")
+        if let authToken {
+            req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
 
         if let body {

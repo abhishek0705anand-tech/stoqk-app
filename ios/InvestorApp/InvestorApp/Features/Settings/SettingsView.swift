@@ -68,7 +68,7 @@ struct SettingsView: View {
                     // Danger zone
                     Section {
                         Button(role: .destructive) {
-                            appState.signOut()
+                            Task { await appState.signOut() }
                         } label: {
                             Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                         }

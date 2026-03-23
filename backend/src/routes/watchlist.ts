@@ -5,7 +5,7 @@ import { fetchLivePrices } from "../lib/nse.js";
 const watchlist = new Hono();
 
 watchlist.get("/", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { data: items, error } = await supabase
@@ -46,7 +46,7 @@ watchlist.get("/", async (c) => {
 });
 
 watchlist.post("/", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { ticker } = await c.req.json<{ ticker: string }>();
@@ -63,7 +63,7 @@ watchlist.post("/", async (c) => {
 });
 
 watchlist.delete("/:ticker", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { error } = await supabase

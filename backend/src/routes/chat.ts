@@ -6,7 +6,7 @@ const chat = new Hono();
 
 // POST /chat — enqueue a chat job, return job_id immediately
 chat.post("/", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const { message } = await c.req.json<{ message: string }>();
@@ -32,7 +32,7 @@ chat.post("/", async (c) => {
 
 // GET /chat/result/:job_id — poll for result
 chat.get("/result/:job_id", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const jobId = c.req.param("job_id");
@@ -51,7 +51,7 @@ chat.get("/result/:job_id", async (c) => {
 
 // GET /chat/suggestions — suggested questions based on profile + holdings
 chat.get("/suggestions", async (c) => {
-  const userId = c.req.header("x-user-id");
+  const userId = c.get("userId") as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const [profileRes, holdingsRes, signalsRes] = await Promise.all([
