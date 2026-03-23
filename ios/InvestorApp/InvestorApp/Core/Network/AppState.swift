@@ -8,8 +8,8 @@ private enum SupabaseAuth {
     static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybHpod2J4c29odmdvZmR3am1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMDI2MTksImV4cCI6MjA4OTc3ODYxOX0.4_jEvoqjRPOgJHUCnuCd0GVPaDT5SnO2x6pgWLTu57Q"
 
     struct SessionResponse: Decodable {
-        let access_token: String
-        let refresh_token: String
+        let access_token: String?
+        let refresh_token: String?
         let user: SupabaseUser
     }
     struct SupabaseUser: Decodable { let id: String }
@@ -96,7 +96,13 @@ final class AppState: ObservableObject {
 
     func signUp(email: String, password: String) async throws {
         let session = try await SupabaseAuth.signUp(email: email, password: password)
-        applySession(session)
+        if session.access_token != nil {
+            // Email confirmation disabled — signed up and immediately logged in
+            applySession(session)
+        } else {
+            // Email confirmation enabled — user needs to confirm before signing in
+            throw AuthError.message("Account created! Please check your email to confirm before signing in.")
+        }
     }
 
     func signOut() async {
@@ -120,11 +126,22 @@ final class AppState: ObservableObject {
     }
 
     private func applySession(_ session: SupabaseAuth.SessionResponse) {
+        guard let accessToken = session.access_token,
+              let refreshToken = session.refresh_token else { return }
         userId = session.user.id
         isAuthenticated = true
-        defaults.set(session.access_token, forKey: "sb_access_token")
-        defaults.set(session.refresh_token, forKey: "sb_refresh_token")
-        APIClient.shared.setAuthToken(session.access_token)
+        defaults.set(accessToken, forKey: "sb_access_token")
+        defaults.set(refreshToken, forKey: "sb_refresh_token")
+        APIClient.shared.setAuthToken(accessToken)
+    }
+
+    // Called by APIClient when it receives a 401 — refreshes and retries
+    func refreshTokenIfNeeded() async throws {
+        guard let refreshToken = defaults.string(forKey: "sb_refresh_token") else {
+            clearSession(); throw AuthError.message("Session expired. Please sign in again.")
+        }
+        let session = try await SupabaseAuth.refresh(token: refreshToken)
+        applySession(session)
     }
 
     private func clearSession() {

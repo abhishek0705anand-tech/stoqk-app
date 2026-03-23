@@ -17,7 +17,8 @@ final class APIClient: ObservableObject {
     private func request<T: Decodable>(
         _ path: String,
         method: String = "GET",
-        body: (some Encodable)? = nil as String?
+        body: (some Encodable)? = nil as String?,
+        isRetry: Bool = false
     ) async throws -> T {
         guard let url = URL(string: baseURL + path) else {
             throw APIError.invalidURL
@@ -36,12 +37,19 @@ final class APIClient: ObservableObject {
         }
 
         let (data, response) = try await URLSession.shared.data(for: req)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
 
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        // Token expired — refresh once and retry
+        if statusCode == 401 && !isRetry {
+            try await AppState.shared.refreshTokenIfNeeded()
+            return try await request(path, method: method, body: body, isRetry: true)
+        }
+
+        guard (200..<300).contains(statusCode) else {
             if let errorBody = try? JSONDecoder().decode(APIErrorBody.self, from: data) {
                 throw APIError.serverError(errorBody.error)
             }
-            throw APIError.httpError((response as? HTTPURLResponse)?.statusCode ?? 0)
+            throw APIError.httpError(statusCode)
         }
 
         return try JSONDecoder().decode(T.self, from: data)
