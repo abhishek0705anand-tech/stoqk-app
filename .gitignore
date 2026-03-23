@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+.next/
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+pattern-scanner/venv/
+pattern-scanner/.env
+*.egg-info/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode / iOS
+ios/InvestorApp/InvestorApp.xcodeproj/xcuserdata/
+ios/InvestorApp/*.xcworkspace/xcuserdata/
+ios/InvestorApp/DerivedData/
+ios/InvestorApp/*.xcarchive
+ios/InvestorApp/Pods/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*

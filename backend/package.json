@@ -1,0 +1,25 @@
+{
+  "name": "stoqk-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node --env-file=.env --experimental-strip-types src/index.ts",
+    "build": "tsc --outDir dist",
+    "inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@hono/node-server": "^1.13.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "apn": "^2.2.0",
+    "hono": "^4.6.3",
+    "inngest": "^3.22.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

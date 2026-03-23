@@ -1,0 +1,6 @@
+TA-Lib==0.4.32
+numpy==1.26.4
+pandas==2.2.2
+supabase==2.7.4
+httpx==0.27.0
+python-dotenv==1.0.1
