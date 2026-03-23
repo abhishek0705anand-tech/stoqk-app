@@ -11,19 +11,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (value) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
   }
 
-  let body: BodyInit | undefined;
+  let body: Uint8Array | undefined;
   if (req.method !== "GET" && req.method !== "HEAD") {
-    body = await new Promise<Buffer>((resolve) => {
+    const buf = await new Promise<Buffer>((resolve) => {
       const chunks: Buffer[] = [];
-      req.on("data", (chunk) => chunks.push(chunk));
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
       req.on("end", () => resolve(Buffer.concat(chunks)));
     });
+    if (buf.length > 0) body = new Uint8Array(buf);
   }
 
   const fetchReq = new Request(url, {
     method: req.method,
     headers,
-    body: body && (body as Buffer).length > 0 ? body : undefined,
+    body,
   });
 
   const honoRes = await app.fetch(fetchReq);

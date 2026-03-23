@@ -14,7 +14,8 @@ import newsRoutes from "./routes/news.js";
 // Inngest mounted only outside Vercel (local dev via src/index.ts)
 // On Vercel, jobs are triggered via inngest.send() events from routes
 const isVercel = !!process.env.VERCEL;
-let mountInngest: ((app: ReturnType<typeof import("hono").Hono>) => void) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mountInngest: ((app: any) => void) | null = null;
 if (!isVercel) {
   const jobsModule = await import("./jobs/index.js");
   mountInngest = jobsModule.mountInngest;
