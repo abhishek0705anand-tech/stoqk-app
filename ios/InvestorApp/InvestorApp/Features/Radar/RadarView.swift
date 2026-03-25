@@ -332,6 +332,9 @@ struct SignalDetailSheet: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
+                        StockChart(ticker: signal.ticker)
+                            .padding(.vertical, 8)
+
                         Divider()
 
                         if let ctx = signal.historical_context {

@@ -317,6 +317,10 @@ struct HoldingDetailSheet: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.lg) {
+                        // Chart
+                        StockChart(ticker: holding.ticker)
+                            .padding(.bottom, 8)
+
                         // Stats
                         HoldingStatsCard(holding: holding)
 

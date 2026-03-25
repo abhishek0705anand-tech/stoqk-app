@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 // MARK: - Card
 
@@ -275,5 +276,170 @@ struct IndexChip: View {
         .background(Color.bgCard)
         .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .appShadow(radius: 4, opacity: 0.04)
+    }
+}
+
+// MARK: - App Logo
+
+struct BraidedLogo: View {
+    var size: CGFloat = 80
+    var color: Color = .brand
+    
+    var body: some View {
+        ZStack {
+            // Background glow
+            Circle()
+                .fill(color.opacity(0.1))
+                .frame(width: size * 1.4, height: size * 1.4)
+            
+            // Outer Ring
+            Circle()
+                .stroke(color.opacity(0.2), lineWidth: size * 0.05)
+                .frame(width: size, height: size)
+            
+            // Stylized 'S' using the provided asset
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size * 0.8, height: size * 0.8)
+                .clipShape(Circle())
+        }
+    }
+}
+
+struct ChartDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let price: Double
+}
+
+struct StockChart: View {
+    let ticker: String
+    @State private var data: [ChartDataPoint] = []
+    @State private var isLoading = true
+    @State private var selectedPoint: ChartDataPoint? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isLoading {
+                ShimmerView()
+                    .frame(height: 180)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+            } else if data.isEmpty {
+                VStack {
+                    Image(systemName: "chart.line.flattrend.xyaxis")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.textTertiary)
+                    Text("No price history available")
+                        .font(AppFont.caption())
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    // Header with price info
+                    HStack(alignment: .firstTextBaseline) {
+                        let currentPrice = selectedPoint?.price ?? data.last?.price ?? 0
+                        Text(String(format: "₹%.2f", currentPrice))
+                            .font(AppFont.number(24))
+                            .foregroundStyle(Color.textPrimary)
+                        
+                        if let first = data.first?.price {
+                            let last = data.last?.price ?? 0
+                            let diff = last - first
+                            let pct = (diff / first) * 100
+                            Text(String(format: "%+.2f%%", pct))
+                                .font(AppFont.mono(12))
+                                .foregroundStyle(diff >= 0 ? Color.gain : Color.loss)
+                        }
+                        Spacer()
+                    }
+                    
+                    Chart {
+                        ForEach(data) { point in
+                            LineMark(
+                                x: .value("Date", point.date),
+                                y: .value("Price", point.price)
+                            )
+                            .foregroundStyle(Color.brand.gradient)
+                            .interpolationMethod(.catmullRom)
+                            
+                            AreaMark(
+                                x: .value("Date", point.date),
+                                y: .value("Price", point.price)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.brand.opacity(0.2), Color.brand.opacity(0.0)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        }
+                        
+                        if let selected = selectedPoint {
+                            RuleMark(x: .value("Selected", selected.date))
+                                .foregroundStyle(Color.textTertiary)
+                                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
+                            
+                            PointMark(x: .value("Selected", selected.date), y: .value("Selected", selected.price))
+                                .foregroundStyle(Color.brand)
+                                .symbolSize(100)
+                        }
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day, count: 20)) { value in
+                            AxisValueLabel(format: .dateTime.day().month())
+                                .font(AppFont.caption(9))
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .trailing) { value in
+                            AxisValueLabel()
+                                .font(AppFont.mono(9))
+                        }
+                    }
+                    .frame(height: 180)
+                    .chartOverlay { proxy in
+                        GeometryReader { geo in
+                            Rectangle().fill(.clear).contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture()
+                                        .onChanged { value in
+                                            let x = value.location.x - geo[proxy.plotAreaFrame].origin.x
+                                            if let date: Date = proxy.value(atX: x) {
+                                                selectedPoint = data.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
+                                            }
+                                        }
+                                        .onEnded { _ in selectedPoint = nil }
+                                )
+                        }
+                    }
+                }
+            }
+        }
+        .task { await loadData() }
+    }
+    
+    private func loadData() async {
+        isLoading = true
+        do {
+            let prices = try await APIClient.shared.getPriceHistory(ticker: ticker)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            
+            data = prices.compactMap { p in
+                guard let date = formatter.date(from: p.date) else { return nil }
+                return ChartDataPoint(date: date, price: p.close)
+            }
+        } catch {
+            print("Chart error: \(error)")
+        }
+        isLoading = false
     }
 }

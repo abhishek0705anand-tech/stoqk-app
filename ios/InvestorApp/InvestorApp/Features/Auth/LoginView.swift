@@ -17,9 +17,7 @@ struct LoginView: View {
 
                 // Logo
                 VStack(spacing: Spacing.md) {
-                    Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                        .font(.system(size: 72))
-                        .foregroundStyle(Color.brand)
+                    BraidedLogo(size: 80)
                         .symbolEffect(.pulse)
 
                     Text("Stoqk")

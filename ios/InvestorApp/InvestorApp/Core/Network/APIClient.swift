@@ -138,6 +138,11 @@ final class APIClient: ObservableObject {
         return res.patterns
     }
 
+    func getPriceHistory(ticker: String) async throws -> [PricePoint] {
+        let res: PriceHistoryResponse = try await request("/prices/history/\(ticker)")
+        return res.prices
+    }
+
     // MARK: - News
 
     func getNews(ticker: String) async throws -> NewsResponse {

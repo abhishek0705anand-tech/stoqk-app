@@ -144,6 +144,16 @@ struct MacroIndicator: Codable {
     var repo_rate: Double?
 }
 
+struct PricePoint: Codable {
+    var ticker: String
+    var date: String
+    var close: Double
+}
+
+struct PriceHistoryResponse: Decodable {
+    var prices: [PricePoint]
+}
+
 struct DailyBrief: Codable, Identifiable {
     var id: String
     var date: String

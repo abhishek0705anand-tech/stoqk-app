@@ -11,6 +11,7 @@ import briefsRoutes from "./routes/briefs.js";
 import patternsRoutes from "./routes/patterns.js";
 import internalRoutes from "./routes/internal.js";
 import newsRoutes from "./routes/news.js";
+import pricesRoutes from "./routes/prices.js";
 import { authMiddleware } from "./middleware/auth.js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const { mountInngest } = await import("./jobs/index.js") as any;
@@ -45,6 +46,7 @@ api.route("/briefs", briefsRoutes);
 api.route("/patterns", patternsRoutes);
 api.route("/internal", internalRoutes);
 api.route("/news", newsRoutes);
+api.route("/prices", pricesRoutes);
 
 app.route("/api/v1", api);
 

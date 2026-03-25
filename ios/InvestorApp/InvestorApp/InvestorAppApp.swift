@@ -13,7 +13,9 @@ struct InvestorAppApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if !appState.isAuthenticated {
+                if appState.isInitialLoading {
+                    SplashView()
+                } else if !appState.isAuthenticated {
                     LoginView()
                 } else if !appState.isOnboarded {
                     OnboardingView()
@@ -23,6 +25,7 @@ struct InvestorAppApp: App {
                         .environmentObject(appState)
                 }
             }
+            .animation(.easeInOut, value: appState.isInitialLoading)
             .environmentObject(appState)
             .preferredColorScheme(.none) // System default — supports dark mode
         }

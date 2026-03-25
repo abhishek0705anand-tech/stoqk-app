@@ -78,12 +78,16 @@ final class AppState: ObservableObject {
     @Published var userId: String? = nil
     @Published var profile: UserProfile? = nil
     @Published var isOnboarded: Bool = false
+    @Published var isInitialLoading: Bool = true
 
     private let api = APIClient.shared
     private let defaults = UserDefaults.standard
 
     init() {
-        Task { await restoreSession() }
+        Task {
+            await restoreSession()
+            isInitialLoading = false
+        }
     }
 
     // MARK: - Auth
