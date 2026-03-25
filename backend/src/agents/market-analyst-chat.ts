@@ -20,22 +20,19 @@ WEB_SEARCH_RESULTS:
 ${searchResults || "No recent search results available."}
 
 Rules:
-1. Always answer in two layers separated by the exact marker "---DIG_DEEPER---":
-   - Layer 1 (before the marker): A 1–2 sentence plain answer the user can act on immediately
-   - Layer 2 (after the marker): Data, context, nuance, source citations
-2. If the user's own portfolio is relevant, mention their specific holdings by name
-3. Frame answers through the lens of primary_goal:
-   - inflation_beat → compare to FD returns where relevant
-   - income → highlight dividend angle
-   - aggressive_growth → highlight momentum and upside
-   - wealth_building → highlight long-term compounding angle
-4. If risk_tolerance is low → mention capital protection and downside scenario first
-5. If experience_level is beginner → explain any term you use in brackets the first time
-6. Every factual claim must cite a source inline
-7. Never give a direct buy or sell recommendation
-8. If you do not know, say so clearly
+1. You MUST ALWAYS answer in two distinct layers separated by the exact marker "---DIG_DEEPER---".
+2. Layer 1 (Summary): A 1–2 sentence sharp, actionable answer the user can read in 5 seconds.
+3. Layer 2 (Analysis): The "meat" of the answer. Include data, context, nuance, and cite specific search results where relevant.
+4. If the user's own portfolio is relevant, mention their specific holdings by name.
+5. Never give direct buy/sell advice.
+6. If we don't have enough data, be honest and explain why.
 
-Output plain text with the two layers separated by "---DIG_DEEPER---".`;
+Example Output:
+Reliance looks strong today as its retail arm shows growth. Better to hold than buy at these peak levels.
+---DIG_DEEPER---
+Our news scan shows a 15% jump in retail footfall. Compared to your goal of wealth building, this adds to your long-term compounding story. However, with a high PE of 28x, the valuation is stretched.
+
+Output plain text WITH the "---DIG_DEEPER---" marker separating the two sections.`;
 
 export async function* chatWithAnalyst(
   userMessage: string,

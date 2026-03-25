@@ -60,7 +60,7 @@ export const chatProcessJob = inngest.createFunction(
             fetchNSEAnnouncements(t),
             fetchNewsHeadlines(t, getCompanyName(t)),
           ]);
-          return [...ann, ...headlines].slice(0, 4);
+          return [...ann, ...headlines].slice(0, 2);
         })
       );
       const searchResults = newsResults
@@ -68,11 +68,26 @@ export const chatProcessJob = inngest.createFunction(
         .map((n) => `[${n.source}] ${n.headline} (${n.published_at.slice(0, 10)})${n.summary ? ": " + n.summary : ""}`)
         .join("\n");
 
-      // Call AI — collect all chunks into full text
+      // Call AI — collect all chunks into full text (with retry for 429s)
       let fullText = "";
-      const generator = chatWithAnalyst(message, profile, portfolioContext, activeSignals, searchResults);
-      for await (const chunk of generator) {
-        fullText += chunk;
+      let attempt = 0;
+      while (attempt < 2) {
+        try {
+          fullText = "";
+          const generator = chatWithAnalyst(message, profile, portfolioContext, activeSignals, searchResults);
+          for await (const chunk of generator) {
+            fullText += chunk;
+          }
+          if (fullText.length > 0) break;
+        } catch (err: any) {
+          if ((err?.message?.includes("429") || err?.message?.toLowerCase().includes("quota")) && attempt < 1) {
+            attempt++;
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+          throw err;
+        }
+        attempt++;
       }
 
       // Parse the DIG_DEEPER marker
