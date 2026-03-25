@@ -444,43 +444,87 @@ struct StockChart: View {
     }
 }
 
+// MARK: - Chart Icon (matches app icon)
+
+struct ChartIconView: View {
+    var size: CGFloat = 120
+
+    private let pts: [(CGFloat, CGFloat)] = [
+        (0.00, 1.00), (0.10, 0.82), (0.20, 0.88),
+        (0.32, 0.60), (0.44, 0.66), (0.56, 0.40),
+        (0.66, 0.46), (0.78, 0.20), (0.88, 0.26), (1.00, 0.06),
+    ]
+
+    var body: some View {
+        Canvas { ctx, sz in
+            let w = sz.width, h = sz.height
+
+            func pt(_ nx: CGFloat, _ ny: CGFloat) -> CGPoint {
+                CGPoint(x: nx * w, y: ny * h)
+            }
+
+            let points = pts.map { pt($0.0, $0.1) }
+
+            // Fill under line
+            var fill = Path()
+            fill.move(to: points[0])
+            for p in points.dropFirst() { fill.addLine(to: p) }
+            fill.addLine(to: pt(1, 1))
+            fill.addLine(to: pt(0, 1))
+            fill.closeSubpath()
+            ctx.fill(fill, with: .color(Color(red: 0, green: 0.73, blue: 0.53).opacity(0.15)))
+
+            // Chart line
+            var line = Path()
+            line.move(to: points[0])
+            for p in points.dropFirst() { line.addLine(to: p) }
+            ctx.stroke(line, with: .color(Color(red: 0, green: 0.73, blue: 0.53)),
+                       style: StrokeStyle(lineWidth: w * 0.055, lineCap: .round, lineJoin: .round))
+
+            // End dot
+            let last = points.last!
+            let dr = w * 0.07
+            ctx.fill(Path(ellipseIn: CGRect(x: last.x-dr, y: last.y-dr, width: dr*2, height: dr*2)),
+                     with: .color(Color(red: 0, green: 0.73, blue: 0.53)))
+            let ir = dr * 0.42
+            ctx.fill(Path(ellipseIn: CGRect(x: last.x-ir, y: last.y-ir, width: ir*2, height: ir*2)),
+                     with: .color(.white))
+        }
+        .frame(width: size, height: size * 0.6)
+    }
+}
+
 // MARK: - Splash View
 
 struct SplashView: View {
-    @State private var isActive = false
-    @State private var opacity = 0.5
-    @State private var scale = 0.8
+    @State private var opacity: CGFloat = 0
+    @State private var scale: CGFloat = 0.85
 
     var body: some View {
         ZStack {
-            Color.brand.ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                BraidedLogo(size: 80, color: .white)
+            Color.white.ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                ChartIconView(size: 200)
                     .scaleEffect(scale)
                     .opacity(opacity)
-                
-                VStack(spacing: 8) {
-                    Text("STOQK")
-                        .font(AppFont.display(36))
-                        .fontWeight(.bold)
-                        .foregroundStyle(.white)
-                        .tracking(4)
-                    
-                    Text("AI-NATIVE INVESTING")
-                        .font(AppFont.caption(12))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .tracking(2)
-                }
-                .offset(y: 10)
-                .opacity(opacity)
+
+                Text("Stoqk")
+                    .font(AppFont.display(38))
+                    .foregroundStyle(Color(red: 0.06, green: 0.08, blue: 0.16))
+                    .opacity(opacity)
+
+                Text("Your personal market analyst")
+                    .font(AppFont.caption(13))
+                    .foregroundStyle(Color(red: 0.06, green: 0.08, blue: 0.16).opacity(0.45))
+                    .opacity(opacity)
             }
+            .frame(maxWidth: .infinity)
         }
         .onAppear {
-            withAnimation(.easeIn(duration: 0.8)) {
-                self.opacity = 1.0
-                self.scale = 1.0
+            withAnimation(.spring(duration: 0.7, bounce: 0.3)) {
+                opacity = 1
+                scale = 1
             }
         }
     }
