@@ -19,4 +19,16 @@ prices.get("/history/:ticker", async (c) => {
   return c.json({ prices: data || [] });
 });
 
+prices.get("/fundamentals/:ticker", async (c) => {
+  const ticker = c.req.param("ticker").toUpperCase();
+  const { data, error } = await supabase
+    .from("company_fundamentals")
+    .select("*")
+    .eq("ticker", ticker)
+    .single();
+
+  if (error) return c.json({ error: "Fundamentals not found" }, 404);
+  return c.json({ fundamentals: data });
+});
+
 export default prices;

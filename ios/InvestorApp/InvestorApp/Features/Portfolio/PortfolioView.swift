@@ -309,6 +309,7 @@ struct HoldingDetailSheet: View {
     let signals: [Signal]
     let patterns: [ChartPattern]
     @Environment(\.dismiss) private var dismiss
+    @State private var fundamentals: CompanyFundamentals? = nil
 
     var body: some View {
         NavigationStack {
@@ -323,6 +324,13 @@ struct HoldingDetailSheet: View {
 
                         // Stats
                         HoldingStatsCard(holding: holding)
+
+                        // Fundamentals
+                        if let f = fundamentals {
+                            FundamentalsCard(fundamentals: f)
+                        } else {
+                            ShimmerCard().frame(height: 120)
+                        }
 
                         // Signals
                         if !signals.isEmpty {
@@ -354,7 +362,58 @@ struct HoldingDetailSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task {
+                do {
+                    fundamentals = try await APIClient.shared.getFundamentals(ticker: holding.ticker)
+                } catch {
+                    print("Fundamentals failed: \(error)")
+                }
+            }
         }
+    }
+}
+
+// MARK: - Fundamentals Component
+
+struct FundamentalsCard: View {
+    let fundamentals: CompanyFundamentals
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            SectionHeader(title: "Company Fundamentals")
+            
+            AppCard {
+                VStack(spacing: Spacing.md) {
+                    HStack {
+                        StatItem(label: "P/E Ratio", value: fundamentals.pe.map { String(format: "%.2fx", $0) } ?? "—")
+                        Spacer()
+                        StatItem(label: "ROE", value: fundamentals.roe.map { String(format: "%.1f%%", $0) } ?? "—")
+                        Spacer()
+                        StatItem(label: "D/E Ratio", value: fundamentals.debt_equity.map { String(format: "%.2f", $0) } ?? "—")
+                    }
+                    Divider()
+                    HStack {
+                        StatItem(label: "Rev Growth", value: fundamentals.revenue_growth_pct.map { String(format: "%.1f%%", $0) } ?? "—")
+                        Spacer()
+                        StatItem(label: "Promoter", value: fundamentals.promoter_holding_pct.map { String(format: "%.1f%%", $0) } ?? "—")
+                        Spacer()
+                        StatItem(label: "Market Cap", value: fundamentals.market_cap_cr.map { formatMCap($0) } ?? "—")
+                    }
+                }
+            }
+            
+            if let sector = fundamentals.sector {
+                Text("Sector: \(sector)")
+                    .font(AppFont.caption(12))
+                    .foregroundStyle(Color.textTertiary)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    func formatMCap(_ v: Double) -> String {
+        if v >= 100_000 { return String(format: "₹%.1fL Cr", v / 100_000) }
+        return String(format: "₹%.0f Cr", v)
     }
 }
 

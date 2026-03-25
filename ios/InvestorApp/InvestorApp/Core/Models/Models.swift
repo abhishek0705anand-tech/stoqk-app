@@ -154,6 +154,22 @@ struct PriceHistoryResponse: Decodable {
     var prices: [PricePoint]
 }
 
+struct CompanyFundamentals: Codable {
+    var ticker: String
+    var pe: Double?
+    var roe: Double?
+    var debt_equity: Double?
+    var revenue_growth_pct: Double?
+    var promoter_holding_pct: Double?
+    var pledge_pct: Double?
+    var market_cap_cr: Double?
+    var sector: String?
+}
+
+struct FundamentalsResponse: Decodable {
+    var fundamentals: CompanyFundamentals
+}
+
 struct DailyBrief: Codable, Identifiable {
     var id: String
     var date: String
