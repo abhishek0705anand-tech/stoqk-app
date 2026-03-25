@@ -504,14 +504,13 @@ struct SplashView: View {
         ZStack {
             Color.white.ignoresSafeArea()
 
-            VStack(spacing: 16) {
-                ChartIconView(size: 200)
+            VStack(spacing: 20) {
+                Image(uiImage: UIImage(named: "AppIcon") ?? UIImage())
+                    .resizable()
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 6)
                     .scaleEffect(scale)
-                    .opacity(opacity)
-
-                Text("Stoqk")
-                    .font(AppFont.display(38))
-                    .foregroundStyle(Color(red: 0.06, green: 0.08, blue: 0.16))
                     .opacity(opacity)
 
                 Text("Your personal market analyst")
