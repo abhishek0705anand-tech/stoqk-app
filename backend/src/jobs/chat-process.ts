@@ -106,7 +106,7 @@ export const chatProcessJob = inngest.createFunction(
       const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota");
       const userMsg = isQuota
         ? "The AI service is temporarily unavailable (rate limit reached). Please try again in a minute."
-        : "Something went wrong. Please try again.";
+        : `Something went wrong: ${msg}`;
       console.error("[chat-process] error:", msg);
       await markError(job_id, userMsg);
     }

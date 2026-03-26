@@ -14,12 +14,13 @@ export async function fetchFundamentalsFromYahoo(ticker: string): Promise<{
   promoter_holding_pct?: number;
   pledge_pct?: number;
   market_cap_cr?: number;
+  sector?: string;
 } | null> {
   try {
     // Yahoo uses .NS for NSE stocks
     const yahooTicker = ticker.endsWith(".NS") ? ticker : `${ticker}.NS`;
     const result = await yahoo.quoteSummary(yahooTicker, {
-      modules: ["defaultKeyStatistics", "financialData", "summaryDetail"]
+      modules: ["defaultKeyStatistics", "financialData", "summaryDetail", "summaryProfile"]
     });
 
     if (!result) return null;
@@ -27,6 +28,7 @@ export async function fetchFundamentalsFromYahoo(ticker: string): Promise<{
     const stats = result.defaultKeyStatistics;
     const fin = result.financialData;
     const detail = result.summaryDetail;
+    const profile = (result as any).summaryProfile;
 
     // Convert values
     // market_cap_cr: detail.marketCap is in absolute INR. Divide by 1Cr (10^7)
@@ -36,11 +38,9 @@ export async function fetchFundamentalsFromYahoo(ticker: string): Promise<{
     const pe = detail?.trailingPE || detail?.forwardPE || stats?.forwardPE;
 
     // ROE (Return on Equity)
-    // Often in financialData. If not, we could check other modules or leave null if missing
     const roe = (fin as any)?.returnOnEquity ? (fin as any).returnOnEquity * 100 : undefined;
 
     // Debt to Equity
-    // financialData.debtToEquity is usually 100-based (e.g. 35.65 for 35.65%)
     const debt_equity = fin?.debtToEquity ? fin.debtToEquity / 100 : undefined;
 
     // Revenue Growth (0.104 -> 10.4)
@@ -52,6 +52,8 @@ export async function fetchFundamentalsFromYahoo(ticker: string): Promise<{
     // Pledge pct is not directly available in Yahoo Finance
     const pledge_pct = undefined;
 
+    const sector = profile?.sector;
+
     return {
       pe,
       roe,
@@ -60,6 +62,7 @@ export async function fetchFundamentalsFromYahoo(ticker: string): Promise<{
       promoter_holding_pct,
       pledge_pct,
       market_cap_cr,
+      sector,
     };
   } catch (err) {
     if ((err as any).name === 'HTTPError' && (err as any).response?.statusCode === 404) {

@@ -122,6 +122,7 @@ struct WatchlistItemCard: View {
     let item: WatchlistItem
     let onRemove: () -> Void
     @State private var showPatterns: Bool = false
+    @State private var showDetail: Bool = false
 
     var body: some View {
         AppCard(padding: 0) {
@@ -197,6 +198,11 @@ struct WatchlistItemCard: View {
                     }
                 }
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { showDetail = true }
+        .sheet(isPresented: $showDetail) {
+            StockDetailSheet(ticker: item.ticker)
         }
         .contextMenu {
             Button(role: .destructive) {

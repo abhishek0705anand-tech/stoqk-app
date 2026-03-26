@@ -494,6 +494,163 @@ struct ChartIconView: View {
     }
 }
 
+// MARK: - Fundamentals Strip
+
+struct FundamentalsStrip: View {
+    let ticker: String
+    @State private var data: CompanyFundamentals? = nil
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ShimmerView()
+                    .frame(height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
+            } else if let f = data {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.sm) {
+                        if let pe = f.pe { FundamentalPill(label: "P/E", value: String(format: "%.1f", pe)) }
+                        if let roe = f.roe { FundamentalPill(label: "ROE", value: String(format: "%.1f%%", roe)) }
+                        if let de = f.debt_equity { FundamentalPill(label: "D/E", value: String(format: "%.2f", de)) }
+                        if let ph = f.promoter_holding_pct { FundamentalPill(label: "Promoter", value: String(format: "%.1f%%", ph)) }
+                        if let mc = f.market_cap_cr { FundamentalPill(label: "Mkt Cap", value: formatCrore(mc)) }
+                        if let sector = f.sector { FundamentalPill(label: "Sector", value: sector) }
+                    }
+                }
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        data = try? await APIClient.shared.getFundamentals(ticker: ticker)
+        isLoading = false
+    }
+
+    private func formatCrore(_ cr: Double) -> String {
+        if cr >= 100_000 { return String(format: "%.0fL Cr", cr / 100_000) }
+        return String(format: "%.0f Cr", cr)
+    }
+}
+
+struct FundamentalPill: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(AppFont.caption(9))
+                .foregroundStyle(Color.textTertiary)
+            Text(value)
+                .font(AppFont.mono(12))
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
+        .overlay(RoundedRectangle(cornerRadius: Radius.sm).stroke(Color.bgTertiary, lineWidth: 0.5))
+    }
+}
+
+// MARK: - Pattern Row
+
+struct PatternRow: View {
+    let pattern: ChartPattern
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(pattern.pattern_name)
+                    .font(AppFont.body(13)).fontWeight(.semibold)
+                    .foregroundStyle(Color.textPrimary)
+                Spacer()
+                if let wr = pattern.historical_win_rate {
+                    Text(String(format: "%.0f%% win", wr))
+                        .font(AppFont.caption(11))
+                        .foregroundStyle(wr >= 55 ? Color.gain : Color.textSecondary)
+                }
+            }
+            Text(pattern.plain_explanation)
+                .font(AppFont.body(13))
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(3)
+        }
+        .padding(Spacing.sm)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
+    }
+}
+
+// MARK: - Stock Detail Sheet
+
+struct StockDetailSheet: View {
+    let ticker: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var patterns: [ChartPattern] = []
+    @State private var loadingPatterns = true
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.bgPrimary.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        StockChart(ticker: ticker)
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Label("Fundamentals", systemImage: "chart.bar")
+                                .font(AppFont.caption()).foregroundStyle(Color.textTertiary)
+                            FundamentalsStrip(ticker: ticker)
+                        }
+
+                        if !patterns.isEmpty {
+                            Divider()
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                Label("Chart Patterns", systemImage: "chart.xyaxis.line")
+                                    .font(AppFont.caption()).foregroundStyle(Color.textTertiary)
+                                ForEach(patterns.prefix(5)) { p in
+                                    PatternRow(pattern: p)
+                                }
+                            }
+                        } else if !loadingPatterns {
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                Label("Chart Patterns", systemImage: "chart.xyaxis.line")
+                                    .font(AppFont.caption()).foregroundStyle(Color.textTertiary)
+                                Text("No patterns detected recently")
+                                    .font(AppFont.body(13))
+                                    .foregroundStyle(Color.textTertiary)
+                            }
+                        }
+                    }
+                    .padding(Spacing.lg)
+                }
+            }
+            .navigationTitle(ticker)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .task { await loadPatterns() }
+        }
+    }
+
+    private func loadPatterns() async {
+        loadingPatterns = true
+        patterns = (try? await APIClient.shared.getPatternsForTickers([ticker])) ?? []
+        loadingPatterns = false
+    }
+}
+
 // MARK: - Splash View
 
 struct SplashView: View {

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Stoqk Architecture Documentation</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px;
+      background: #fff;
+    }
+    h1, h2, h3 { color: #111; margin-top: 2em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    h1 { border-bottom: 2px solid #333; }
+    p, ul, ol { margin-bottom: 1.2em; font-size: 15px; }
+    ul, ol { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    strong { color: #000; }
+    code { 
+      background: #f5f5f5; 
+      padding: 2px 6px; 
+      border-radius: 4px; 
+      font-family: Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #c7254e;
+    }
+    blockquote {
+      border-left: 4px solid #4CAF50;
+      margin: 0;
+      padding: 10px 20px;
+      background: #f9fdf9;
+      color: #2c5e2e;
+      font-style: italic;
+      border-radius: 0 8px 8px 0;
+    }
+    .mermaid {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+      margin: 20px 0;
+      text-align: center;
+    }
+    @media print {
+      body { padding: 0; max-width: 100%; }
+      .mermaid { border: none; background: transparent; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</head>
+<body>
+
+<h1>Stoqk App - Complete Architecture & System Documentation</h1>
+
+<p>Stoqk is a next-generation "AI-native" investing application designed to act as a highly personalized, intelligent market analyst for retail investors. Unlike traditional brokerage apps that simply present raw price charts and news feeds, Stoqk actively processes market events, macro-economic indicators, and news through Large Language Models (LLMs). It contextualizes this raw data against the specific user's investment profile, goals, and portfolio holdings to deliver actionable, tailored insights rather than generic advice.</p>
+
+<p>The system is built on a decoupled, serverless architecture:</p>
+<ul>
+  <li><strong>Frontend:</strong> A native iOS application built with SwiftUI, focusing on fluid animations, premium aesthetics, and responsive charts.</li>
+  <li><strong>Backend:</strong> A Node.js (TypeScript) serverless environment hosted on Vercel.</li>
+  <li><strong>Database & Auth:</strong> Supabase (PostgreSQL) is used as the primary data store and authentication provider, leveraging Row Level Security (RLS) for direct client-to-database communication.</li>
+  <li><strong>Orchestration:</strong> Inngest drives all background jobs, cron schedules, and asynchronous AI workflows, easily bypassing Vercel's standard execution limits.</li>
+  <li><strong>AI Engine:</strong> Google Gemini 2.0 Flash handles rapid text generation, signal scoring, and conversational analysis.</li>
+</ul>
+
+<h2>1. Overall System Data Flow</h2>
+<div class="mermaid">
+graph TD
+    %% Frontend Layer
+    subgraph Frontend [iOS App - SwiftUI]
+        UI[User Interface]
+        State[AppState / Combine]
+        Charts[Native Stock Charts]
+    end
+
+    %% Database Layer
+    subgraph DataStore [Supabase - PostgreSQL]
+        DB[(PostgreSQL DB)]
+        Auth[Supabase Auth]
+    end
+
+    %% Orchestration Layer
+    subgraph Orchestration [Inngest Pipeline]
+        Cron[Scheduled Cron Jobs]
+        Events[Event Triggers]
+    end
+
+    %% Backend Layer
+    subgraph Serverless [Vercel Node.js Backend]
+        Agents[AI Agents]
+        DataFetch[Data Fetchers]
+    end
+
+    %% External Services
+    subgraph External [External Services]
+        NSE[NSE India API]
+        Yahoo[Yahoo Finance API]
+        Gemini[Google Gemini 2.0]
+        APNS[Apple Push Notifications]
+    end
+
+    %% Connections
+    UI <--> State
+    State <-->|Reads Data Locally| DB
+    State <--> Auth
+    UI -->|Trigger Chat| Events
+
+    DB -->|Triggers| Events
+    Cron --> Serverless
+    Events --> Serverless
+
+    Serverless <-->|Fetch Deal Data/Prices| NSE
+    Serverless <-->|Fetch Fundamentals| Yahoo
+    Serverless <-->|Process Insights| Gemini
+    Serverless -->|Push Alerts| APNS
+    Serverless -->|Store Processed Data| DB
+</div>
+
+<h2>2. Technology Stack & Key Decisions</h2>
+<ul>
+  <li><strong>Native iOS (SwiftUI):</strong> Chose native development over cross-platform (React Native/Flutter) to ensure the highest possible UI quality, leveraging native components like Apple's <code>Charts</code> framework for smooth, interactive data visualization and <code>Haptics</code> for premium user feedback.</li>
+  <li><strong>Serverless Node.js (Vercel):</strong> Ensures the backend can scale from zero to thousands of requests instantly. The backend strictly focuses on heavy data scraping and AI processing.</li>
+  <li><strong>Supabase (BaaS):</strong> Eliminates the need for a massive traditional REST API. The iOS app utilizes PostgREST to directly query tables (like <code>daily_briefs</code> and <code>stock_prices</code>), secured by RLS policies so users only see their own data.</li>
+  <li><strong>Inngest:</strong> Vercel functions famously terminate after 15 to 60 seconds. Since AI operations and mass data syncing can take minutes, Inngest breaks these long-running tasks into isolated "Steps." If a step fails, Inngest automatically retries just that step without losing progress.</li>
+  <li><strong>Google Gemini 2.0 Flash:</strong> Chosen as the primary LLM over OpenAI or Claude due to its massive context window (allowing us to feed it the user's entire portfolio alongside market news) and extremely fast time-to-first-token.</li>
+</ul>
+
+<h2>3. Frontend Application Breakdown (iOS)</h2>
+<p>The iOS app is structured into feature-based views, managed by a centralized <code>AppState</code> observable object.</p>
+<ul>
+  <li><strong>SplashView:</strong> The initial launch screen featuring an animated braided logo and application title. Uses a <code>ZStack</code> with opacity and scale animations to seamlessly transition.</li>
+  <li><strong>LoginView & OnboardingView:</strong> Handles user authentication. Post-login, new users complete an onboarding survey assessing their risk tolerance, investment timeline, and financial goals. This generates the <code>profile_block</code> string, heavily utilized by the backend AI agents.</li>
+  <li><strong>MainTabView (Dashboard):</strong> The core hub.
+    <ul>
+      <li><em>Macro Section:</em> Displays the latest Nifty and Sensex values.</li>
+      <li><em>Portfolio Summary:</em> Aggregates the user's current holdings and displays total value and PnL.</li>
+      <li><em>Daily Brief:</em> Prominently displays the AI-generated morning briefing.</li>
+    </ul>
+  </li>
+  <li><strong>AskView (Market Analyst Chat):</strong> A sophisticated chat interface. When a user submits a query, it is written to the <code>chat_messages</code> table via Supabase with a <code>pending</code> status. A real-time listener waits for the backend to update to <code>done</code>.</li>
+  <li><strong>Asset Details (Stock Charts):</strong> Integrates Apple's <code>Charts</code> framework. By dragging across the line chart, users update a <code>selectedPoint</code> state that dynamically refreshes the displayed price.</li>
+</ul>
+
+<h2>4. Data Pipelines and Sources</h2>
+<p>Robust data pipelines are critical, as the AI is only as good as the context it receives.</p>
+<ul>
+  <li><strong>NSE India API (National Stock Exchange):</strong>
+    <ul>
+      <li><em>Bulk Deals, Block Deals, Insider Trading (PIT):</em> Fetched from NSE's market tracking endpoints. These raw events are the lifeblood for the Signal Detection agent.</li>
+      <li><em>Historical Price Data:</em> Fetched via the <code>NextApi/GetQuoteApi</code> endpoint. The backend implements a session cookie manager (<code>ensureNSESession</code>) that mimics a browser request to bypass NSE's strict 404/403 anti-bot protections.</li>
+    </ul>
+  </li>
+  <li><strong>Yahoo Finance (yahoo-finance2 library):</strong>
+    <ul>
+      <li><em>Macro Indicators:</em> Fetches high-level indices (<code>^NSEI</code> for Nifty 50, <code>^BSESN</code> for Sensex), chosen for superior reliability over NSE's volatile index endpoints.</li>
+      <li><em>Company Fundamentals:</em> Scrapes PE Ratio, ROE, Debt/Equity, Market Cap, and Sector classifications.</li>
+    </ul>
+  </li>
+</ul>
+
+<h2>5. AI Agents and System Prompts</h2>
+<p>The underlying intelligence is distributed among specialized agents, each wrapped around a specific prompt matrix.</p>
+
+<h3>A. Signal Detector Agent (<code>signal-detector.ts</code>)</h3>
+<p><strong>Role:</strong> Evaluates raw corporate filings and determines if an event is significant enough for an investor to care about.</p>
+<blockquote>
+  "You are a sharp financial analyst evaluating raw exchange data.<br>
+  Event: {raw_data}<br>
+  Output a JSON object evaluating this event with:<br>
+  - event_type (string)<br>
+  - significance_score (1-100)<br>
+  - plain_summary (1-2 sentences)<br>
+  - historical_context (why this might matter)"
+</blockquote>
+
+<h3>B. Alert Priority Agent (<code>alert-priority.ts</code>)</h3>
+<p><strong>Role:</strong> Decides if an immediate Push Notification is warranted.</p>
+<blockquote>
+  "User Profile: {profile_block}<br>
+  Signal: {signal_summary}<br>
+  Holdings: {user_holdings}<br>
+  Decide if this user MUST receive a push notification right now. Output JSON with should_notify (boolean), urgency (low/med/high), and push_copy (string)."
+</blockquote>
+
+<h3>C. Daily Brief Agent (<code>daily-brief.ts</code>)</h3>
+<p><strong>Role:</strong> Synthesizes a personalized morning newsletter for the user.</p>
+<blockquote>
+  "You are the user's personal wealth manager.<br>
+  Macro Data: {macro_data}<br>
+  Portfolio Context: {portfolio_context}<br>
+  Active Signals: {active_signals}<br>
+  Write a 3-paragraph morning brief tailored exclusively for this user. Tone: Direct, concise, objective."
+</blockquote>
+
+<h3>D. Market Analyst Chat Agent (<code>market-analyst-chat.ts</code>)</h3>
+<p><strong>Role:</strong> Interactive conversational agent. Enforces the <code>---DIG_DEEPER---</code> markdown constraint.</p>
+<blockquote>
+  "You are a sharp market analyst advising a specific investor.<br>
+  Profile: {profile_block}<br>
+  Portfolio: {portfolio_context}<br>
+  Sector Exposure: {sectorExposure}<br>
+  Rules:<br>
+  1. ALWAYS answer in two distinct layers separated by the exact marker '---DIG_DEEPER---'.<br>
+  2. Layer 1 (Summary): A 1-2 sentence sharp, actionable answer the user can read in 5 seconds.<br>
+  3. Layer 2 (Analysis): The 'meat' of the answer with data, nuance, and logic.<br>
+  Output plain text WITH the '---DIG_DEEPER---' marker separating the two sections."
+</blockquote>
+
+<h2>6. Backend Scheduled Jobs (Inngest Cron)</h2>
+<ol>
+  <li><strong>Macro Sync (<code>macro-sync</code>):</strong> Weekdays at 8:30 PM IST. Pulls Nifty, Sensex, and computes FII/DII net flows. Runs at 8:30 PM to ensure exchanges have published the final daily capital flows.</li>
+  <li><strong>Price Sync (<code>price-sync</code>):</strong> Weekdays at 4:00 PM IST (post-market close). Downloads the latest End-of-Day Open, High, Low, Close, and Volume data.</li>
+  <li><strong>Signal Fetch (<code>signal-fetch</code>):</strong> Every 15 minutes, Monday through Friday. Polls NSE for real-time deals. Contains a 5-second pacing delay to bypass AI rate limits.</li>
+  <li><strong>Daily Brief Generator (<code>daily-brief-generator</code>):</strong> Weekdays at 8:00 AM IST. Iterates through all fully onboarded users, triggering the Daily Brief Agent.</li>
+</ol>
+
+
+<h2>7. Critical Architectural Decisions</h2>
+<h3>A. Manual Math vs AI Hallucinations</h3>
+<p>During development, the AI was originally tasked with calculating the user's Total Portfolio Value, PnL percentages, and Sector Concentration by receiving a raw array of holdings and historical prices. This frequently resulted in "Invalid JSON" truncation errors or mathematically incorrect hallucinations. <br>
+<strong>The Solution:</strong> The <code>buildPortfolioContext</code> pipeline was rewritten in pure TypeScript. The backend now calculates precise INR values, exact percentages, and aggregates sector weightings iteratively. These <em>perfect</em> mathematical figures are then passed <em>into</em> the AI's prompt as context. This ensures absolute trust in the numbers.</p>
+
+<h3>B. Inngest Step Implementation for Scalability</h3>
+<p>Processing a sudden influx of 40 market signals against 100 users requires thousands of AI verifications. A standard Vercel function dies rigidly at 60 seconds, which would silently crash the pipeline. By wrapping the core evaluation logic in <code>step.run()</code>, Inngest treats each signal processing unit as an independent, durable execution chunk. If a timeout occurs, Inngest simply pauses and restarts at the exact signal where the failure occurred.</p>
+
+<h3>C. The Two-Layer Chat Abstraction</h3>
+<p>Standard LLM wrappers in financial apps typically produce massive walls of text that are exhausting to read. To deliver an executive, "concierge" feel, the Stoqk backend forces the AI to construct its answer around a <code>---DIG_DEEPER---</code> string marker. The Node.js backend splits the response on this marker before saving it to the database. The SwiftUI iOS application is entirely ignorant of this process; it simply receives a <code>plain</code> string and a <code>deeper</code> string, allowing for instantaneous, clean UI updates where the complex analytical breakdown is hidden behind an expandable disclosure group.</p>
+
+<hr>
+<p style="text-align: center; color: #666; font-size: 13px; margin-top: 40px;">Stoqk System Architecture • Generated 2026</p>
+
+</body>
+</html>

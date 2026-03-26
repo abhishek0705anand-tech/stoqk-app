@@ -28,6 +28,7 @@ struct LoginView: View {
                         .font(AppFont.body())
                         .foregroundStyle(Color.textSecondary)
                 }
+                .frame(maxWidth: .infinity)
 
                 Spacer()
 

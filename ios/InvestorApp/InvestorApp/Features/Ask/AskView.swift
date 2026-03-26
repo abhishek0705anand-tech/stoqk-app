@@ -102,8 +102,22 @@ struct AskView: View {
             }
             .navigationTitle("Ask")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        isInputFocused = false
+                        Haptic.light()
+                    }
+                    .font(AppFont.headline(16))
+                    .foregroundStyle(Color.brand)
+                }
+            }
         }
         .task { await vm.loadSuggestions() }
+        .onTapGesture {
+            if isInputFocused { isInputFocused = false }
+        }
     }
 
     // MARK: - Empty State with Suggestions

@@ -13,40 +13,38 @@ const NSE_TICKERS = [
   "HDFCLIFE","SBILIFE","COALINDIA","GRASIM","INDUSINDBK",
 ];
 
+export async function syncHistoricalPrices(ticker: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const ohlcv = await fetchOHLCV(ticker, sixMonthsAgo, today);
+  if (!ohlcv.length) return 0;
+
+  const rows = ohlcv.map((d) => ({
+    ticker,
+    date: d.date,
+    open: d.open,
+    high: d.high,
+    low: d.low,
+    close: d.close,
+    volume: d.volume,
+  }));
+
+  await supabase.from("stock_prices").upsert(rows, { onConflict: "ticker,date" });
+  return 1;
+}
+
 export const priceSyncJob = inngest.createFunction(
   { id: "price-sync", name: "Sync EOD stock prices" },
   { cron: "0 16 * * 1-5" }, // 4pm IST weekdays (10:30 UTC)
   async ({ step }) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
-
     let synced = 0;
-
     for (const ticker of NSE_TICKERS) {
-      await step.run(`sync-prices-${ticker}`, async () => {
-        const ohlcv = await fetchOHLCV(ticker, sixMonthsAgo, today);
-        if (!ohlcv.length) return;
-
-        const rows = ohlcv.map((d) => ({
-          ticker,
-          date: d.date,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-          volume: d.volume,
-        }));
-
-        await supabase
-          .from("stock_prices")
-          .upsert(rows, { onConflict: "ticker,date" });
-
-        synced++;
+      const count = await step.run(`sync-prices-${ticker}`, async () => {
+        return syncHistoricalPrices(ticker);
       });
+      synced += count;
     }
-
     return { synced };
   }
 );

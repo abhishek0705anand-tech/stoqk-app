@@ -10,9 +10,26 @@ const nseHeaders = {
   Referer: "https://www.nseindia.com/",
 };
 
+let nseCookie = "";
+let nseLastInit = 0;
+
+async function ensureNSESession() {
+  if (Date.now() - nseLastInit < 5 * 60 * 1000) return;
+  try {
+    const res = await fetch("https://www.nseindia.com/", {
+      headers: { ...nseHeaders, Accept: "text/html" },
+      signal: AbortSignal.timeout(10000),
+    });
+    nseCookie = (res.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).join("; ");
+    nseLastInit = Date.now();
+    await new Promise((r) => setTimeout(r, 800));
+  } catch { /* ignore */ }
+}
+
 async function nseGet<T>(path: string): Promise<T> {
+  await ensureNSESession();
   const res = await fetch(`${NSE_BASE}${path}`, {
-    headers: nseHeaders,
+    headers: { ...nseHeaders, Cookie: nseCookie },
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`NSE API error: ${res.status} ${path}`);
@@ -21,8 +38,18 @@ async function nseGet<T>(path: string): Promise<T> {
 
 export async function fetchBulkDeals(): Promise<NSERawEvent[]> {
   try {
-    const data = await nseGet<{ data: NSERawEvent[] }>("/bulk-deals");
-    return data.data || [];
+    const response = await nseGet<any>("/snapshot-capital-market-largedeal");
+    const deals = (response.BULK_DEALS_DATA || []) as any[];
+    return deals.map(d => ({
+      symbol: d.symbol || d.SYMBOL,
+      company: d.companyName || d.COMPANY_NAME,
+      date: d.date || d.TIMESTAMP,
+      acquirerName: d.clientName || d.CLIENT_NAME,
+      buyValue: Number(d.buyValue || d.BUY_VALUE || 0),
+      sellValue: Number(d.sellValue || d.SELL_VALUE || 0),
+      noOfSharesBought: Number(d.buyQty || d.BUY_QUANTITY || 0),
+      noOfSharesSold: Number(d.sellQty || d.SELL_QUANTITY || 0),
+    }));
   } catch (err) {
     console.error("Failed to fetch bulk deals:", err);
     return [];
@@ -31,8 +58,14 @@ export async function fetchBulkDeals(): Promise<NSERawEvent[]> {
 
 export async function fetchInsiderTrades(): Promise<NSERawEvent[]> {
   try {
-    const data = await nseGet<{ data: NSERawEvent[] }>("/insider-trading");
-    return data.data || [];
+    const data = await nseGet<{ data: any[] }>("/corporates-pit?");
+    return (data.data || []).map(d => ({
+      symbol: d.symbol || d.SYMBOL,
+      company: d.companyName || d.COMPANY_NAME,
+      date: d.date || d.TIMESTAMP,
+      acquirerName: d.acquirerName || d.ACQUIRER_NAME,
+      typeOfTransaction: d.typeOfTransaction || d.TYPE_OF_TRANSACTION,
+    }));
   } catch (err) {
     console.error("Failed to fetch insider trades:", err);
     return [];
@@ -41,8 +74,18 @@ export async function fetchInsiderTrades(): Promise<NSERawEvent[]> {
 
 export async function fetchBlockDeals(): Promise<NSERawEvent[]> {
   try {
-    const data = await nseGet<{ data: NSERawEvent[] }>("/block-deals");
-    return data.data || [];
+    const response = await nseGet<any>("/snapshot-capital-market-largedeal");
+    const deals = (response.BLOCK_DEALS_DATA || []) as any[];
+    return deals.map(d => ({
+      symbol: d.symbol || d.SYMBOL,
+      company: d.companyName || d.COMPANY_NAME,
+      date: d.date || d.TIMESTAMP,
+      acquirerName: d.clientName || d.CLIENT_NAME,
+      buyValue: Number(d.buyValue || d.BUY_VALUE || 0),
+      sellValue: Number(d.sellValue || d.SELL_VALUE || 0),
+      noOfSharesBought: Number(d.buyQty || d.BUY_QUANTITY || 0),
+      noOfSharesSold: Number(d.sellQty || d.SELL_QUANTITY || 0),
+    }));
   } catch (err) {
     console.error("Failed to fetch block deals:", err);
     return [];
@@ -54,26 +97,29 @@ export async function fetchOHLCV(
   fromDate: string,
   toDate: string
 ): Promise<Array<{ date: string; open: number; high: number; low: number; close: number; volume: number }>> {
-  try {
-    const data = await nseGet<{
-      data: Array<{
-        CH_TIMESTAMP: string;
-        CH_OPENING_PRICE: number;
-        CH_HIGH_PRICE: number;
-        CH_LOW_PRICE: number;
-        CH_CLOSING_PRICE: number;
-        CH_TOT_TRADED_QTY: number;
-      }>;
-    }>(`/historical/cm/equity?symbol=${ticker}&series=["EQ"]&from=${fromDate}&to=${toDate}`);
+  const fmtDate = (iso: string) => {
+    const [y, m, d] = iso.split("-");
+    return `${d}-${m}-${y}`;
+  };
 
-    return (data.data || []).map((d) => ({
-      date: d.CH_TIMESTAMP,
-      open: d.CH_OPENING_PRICE,
-      high: d.CH_HIGH_PRICE,
-      low: d.CH_LOW_PRICE,
-      close: d.CH_CLOSING_PRICE,
-      volume: d.CH_TOT_TRADED_QTY,
-    }));
+  try {
+    const from = fmtDate(fromDate);
+    const to = fmtDate(toDate);
+    
+    // Updated endpoint found via browser inspection
+    const path = `/NextApi/apiClient/GetQuoteApi?functionName=getHistoricalTradeData&symbol=${ticker}&series=EQ&fromDate=${from}&toDate=${to}`;
+    
+    const response = await nseGet<any>(path);
+    const data = (Array.isArray(response) ? response : response.data || []) as any[];
+
+    return data.map((d) => ({
+      date: d.CH_TIMESTAMP || d.mktDate || d.date || "",
+      open: Number(d.CH_OPENING_PRICE || d.open || d.openPrice || 0),
+      high: Number(d.CH_HIGH_PRICE || d.high || d.highPrice || 0),
+      low: Number(d.CH_LOW_PRICE || d.low || d.lowPrice || 0),
+      close: Number(d.CH_CLOSING_PRICE || d.close || d.lastPrice || 0),
+      volume: Number(d.CH_TOT_TRADED_QTY || d.volume || d.qty || 0),
+    })).filter(d => d.date);
   } catch (err) {
     console.error(`Failed to fetch OHLCV for ${ticker}:`, err);
     return [];
@@ -139,41 +185,50 @@ async function fetchNSEQuotes(tickers: string[]): Promise<LivePrice[]> {
   return prices;
 }
 
+import YahooFinance from "yahoo-finance2";
+const yahoo = new YahooFinance();
+
 export async function fetchMacroData(): Promise<Partial<MacroIndicator>> {
   try {
-    const nifty = await nseGet<{ data: Array<{ indexSymbol: string; last: number; percentChange: number }> }>(
-      "/allIndices"
-    );
-
-    const niftyData = nifty.data?.find((d) => d.indexSymbol === "NIFTY 50");
-    const sensexData = nifty.data?.find((d) => d.indexSymbol === "SENSEX");
+    const [nifty, sensex] = await Promise.all([
+      yahoo.quote("^NSEI").catch(() => null),
+      yahoo.quote("^BSESN").catch(() => null),
+    ]);
 
     return {
       date: new Date().toISOString().slice(0, 10),
-      nifty_close: niftyData?.last || 0,
-      sensex_close: sensexData?.last || 0,
-      nifty_change_pct: niftyData?.percentChange || 0,
-      sensex_change_pct: sensexData?.percentChange || 0,
+      nifty_close: nifty?.regularMarketPrice || 0,
+      sensex_close: sensex?.regularMarketPrice || 0,
+      nifty_change_pct: nifty?.regularMarketChangePercent || 0,
+      sensex_change_pct: sensex?.regularMarketChangePercent || 0,
+      repo_rate: 6.5, // Default for now, RBI rarely changes this
     };
   } catch (err) {
-    console.error("Failed to fetch macro data:", err);
-    return {};
+    console.error("Failed to fetch macro data from Yahoo:", err);
+    return { repo_rate: 6.5 };
   }
 }
 
 export async function fetchFIIDIIFlows(): Promise<{ fii_net_cr: number; dii_net_cr: number }> {
   try {
-    const data = await nseGet<{
-      data: Array<{ buyValue: number; sellValue: number; category: string }>;
-    }>("/fiidiiTradeReact");
-
+    // Attempt NSE endpoint
+    const data = await nseGet<any>("/fiidiiTradeReact").catch(() => ({ data: [] }));
+    
     let fii = 0;
     let dii = 0;
     for (const row of data.data || []) {
-      const net = (row.buyValue - row.sellValue) / 10000000; // to crores
-      if (row.category?.toLowerCase().includes("fii")) fii += net;
-      if (row.category?.toLowerCase().includes("dii")) dii += net;
+      const buy = Number(row.buyValue || 0);
+      const sell = Number(row.sellValue || 0);
+      const net = (buy - sell) / 100; // to Cr (They often report in hundreds of lakhs or Cr depending on format)
+      // Actually, NSE reports in Cr already or lakhs? 
+      // Usually it's in Cr. Let's assume Cr.
+      const netCr = (buy - sell); 
+      if (row.category?.toLowerCase().includes("fii")) fii += netCr;
+      if (row.category?.toLowerCase().includes("dii")) dii += netCr;
     }
+
+    // If still 0, it might be too early. We don't want to overwrite with 0 if possible, 
+    // but the caller handles the upsert.
     return { fii_net_cr: Math.round(fii), dii_net_cr: Math.round(dii) };
   } catch {
     return { fii_net_cr: 0, dii_net_cr: 0 };

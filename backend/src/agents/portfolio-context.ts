@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase.js";
 import { runAgent, FAST_MODEL } from "../lib/anthropic.js";
 import type { UserProfile, UserHolding, LivePrice, Signal, PortfolioContext } from "../types/index.js";
 
@@ -33,8 +34,61 @@ export async function buildPortfolioContext(
   }
 
   const priceMap = Object.fromEntries(livePrices.map((p) => [p.ticker, p]));
+  
+  // Fetch sectors for these tickers
+  const { data: fundData } = await supabase
+    .from("company_fundamentals")
+    .select("ticker, sector")
+    .in("ticker", holdings.map(h => h.ticker));
+  
+  const sectorMap = Object.fromEntries((fundData || []).map(f => [f.ticker, f.sector]));
 
-  const userContent = `USER_PROFILE:\n${profile.profile_block}\n\nUSER_HOLDINGS:\n${JSON.stringify(holdings)}\n\nLIVE_PRICES:\n${JSON.stringify(priceMap)}\n\nACTIVE_SIGNALS:\n${JSON.stringify(activeSignals.slice(0, 20))}`;
+  let totalValue = 0;
+  let totalCost = 0;
+  let topGainer: { ticker: string; pnl_pct: number } | null = null;
+  let topLoser: { ticker: string; pnl_pct: number } | null = null;
+  const sectorValues: Record<string, number> = {};
 
-  return runAgent<PortfolioContext>(SYSTEM_PROMPT, userContent, FAST_MODEL);
+  for (const h of holdings) {
+    const price = priceMap[h.ticker]?.price || h.avg_buy_price;
+    const currentVal = price * h.qty;
+    const costBasis = h.avg_buy_price * h.qty;
+    
+    totalValue += currentVal;
+    totalCost += costBasis;
+
+    const pnlPct = ((price - h.avg_buy_price) / h.avg_buy_price) * 100;
+    
+    if (!topGainer || pnlPct > topGainer.pnl_pct) topGainer = { ticker: h.ticker, pnl_pct: pnlPct };
+    if (!topLoser || pnlPct < topLoser.pnl_pct) topLoser = { ticker: h.ticker, pnl_pct: pnlPct };
+
+    const sector = sectorMap[h.ticker] || "Other";
+    sectorValues[sector] = (sectorValues[sector] || 0) + currentVal;
+  }
+
+  const sectorExposure: Record<string, number> = {};
+  if (totalValue > 0) {
+    for (const [sector, value] of Object.entries(sectorValues)) {
+      sectorExposure[sector] = (value / totalValue) * 100;
+    }
+  }
+
+  const activeSignalsOnHoldings = activeSignals
+    .filter(s => holdings.some(h => h.ticker === s.ticker))
+    .map(s => ({
+      ticker: s.ticker,
+      significance_score: s.significance_score,
+      plain_summary: s.plain_summary,
+      event_type: s.event_type
+    }));
+
+  return {
+    total_current_value: Math.round(totalValue * 100) / 100,
+    total_unrealised_pnl: Math.round((totalValue - totalCost) * 100) / 100,
+    total_unrealised_pnl_pct: totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0,
+    top_gainer: topGainer,
+    top_loser: topLoser,
+    sector_exposure: sectorExposure,
+    active_signals_on_holdings: activeSignalsOnHoldings
+  };
 }

@@ -1,0 +1,151 @@
+Stoqk App - Complete Architecture and System Documentation
+=========================================================
+
+1. System Overview
+------------------
+Stoqk is an AI-native investing application designed to act as a personalized market analyst for retail investors. Unlike traditional brokerage apps that only show raw data, Stoqk processes market events, macro indicators, and news through Large Language Models (LLMs) to provide contextual, personalized insights based on the user's specific portfolio and investment profile.
+
+The system is composed of an iOS frontend built natively with SwiftUI and a serverless Node.js (TypeScript) backend hosted on Vercel. Supabase (PostgreSQL) is used as the primary database and authentication provider, while Inngest orchestrates all background jobs, cron schedules, and asynchronous AI agent workflows.
+
+2. Architecture Diagram
+-----------------------
+```mermaid
+graph TD
+    Client[iOS App - SwiftUI] -->|Reads/Writes via PostgREST| SupabaseDB[(Supabase PostgreSQL)]
+    Client -->|Triggers Events| Inngest[Inngest Event Pipeline]
+    
+    SupabaseDB --> Inngest
+    Inngest -->|Executes Serverless Functions| VercelBackend[Vercel Node.js Backend]
+    
+    VercelBackend -->|Fetches Market Data| ExternalAPIs((NSE API & Yahoo Finance))
+    VercelBackend -->|Processes AI Logic| GeminiAI[Google Gemini 2.0 Flash]
+    VercelBackend -->|Sends Push Notifications| APNS[Apple Push Notification Service]
+    VercelBackend -->|Writes Processed Data| SupabaseDB
+```
+
+3. Technology Stack & Key Decisions
+-----------------------------------
+* Frontend: iOS / SwiftUI. Chosen for native performance, fluid animations, and premium feeling UI.
+* Backend: Node.js (TypeScript) on Vercel. Chosen for serverless scalability.
+* Database: Supabase (PostgreSQL). Chosen for real-time capabilities and built-in Row Level Security (RLS) which allows the iOS app to fetch data directly without needing custom API routes for simple CRUD operations.
+* Orchestration: Inngest. Critical for bypassing Vercel's strict 60-second execution timeout. Inngest breaks long-running AI tasks into individual "steps", each with its own timeout window, and handles automatic retries on API rate limits (e.g., Gemini 429 Too Many Requests).
+* AI Provider: Google Gemini 2.0 Flash. Chosen for rapid generation, large context windows, and cost-efficiency.
+
+4. Data Sources and Pipelines
+-----------------------------
+The application aggregates data from the following external sources:
+* Yahoo Finance (yahoo-finance2): Used to fetch Nifty 50 and Sensex macro indicators, as well as company fundamentals (P/E, ROE, sectors, market cap). Chosen for high reliability.
+* NSE API (National Stock Exchange of India): Used via reverse-engineered endpoints to fetch Bulk Deals, Block Deals, Insider Trading data (PIT), FI/DII trading flows, and historical EOD price data (via GetQuoteApi). Session cookies are automatically injected to bypass bot protections.
+* Upstox API: Used as a primary/fallback for live stock quotes if an access token is provided, falling back to NSE if absent.
+
+5. AI Agents and Prompts
+------------------------
+The intelligence of the app is distributed across several specialized agents. Each agent acts on a specific pipeline.
+
+A. Signal Detector Agent
+Location: src/agents/signal-detector.ts
+Role: Evaluates raw financial events (e.g., a bulk deal on NSE) and determines its significance level for typical investors.
+Sample Prompt Template:
+"You are a sharp financial analyst evaluating raw exchange data.
+Event: {raw_data}
+Output a JSON object evaluating this event with:
+- event_type (string)
+- significance_score (1-100)
+- plain_summary (1-2 sentences)
+- historical_context (why this might matter)"
+
+B. Alert Priority Agent
+Location: src/agents/alert-priority.ts
+Role: Determines if a detected signal warrants a direct push notification to a specific user, considering their investment profile, holdings, and watchlists.
+Sample Prompt Template:
+"User Profile: {profile_block}
+Signal: {signal_summary}
+Holdings: {user_holdings}
+Decide if this user MUST receive a push notification right now. Output JSON with should_notify (boolean), urgency (low/med/high), and push_copy (string)."
+
+C. Daily Brief Agent
+Location: src/agents/daily-brief.ts
+Role: Generates the personalized morning briefing, summarizing macro conditions and specific insights on the user's holdings.
+Sample Prompt Template:
+"You are the user's personal wealth manager.
+Macro: {macro_data}
+Portfolio Context: {portfolio_context}
+Signals: {active_signals}
+Write a 3-paragraph morning brief. Tone: Direct, concise, objective."
+
+D. Market Analyst Chat Agent
+Location: src/agents/market-analyst-chat.ts
+Role: Conversational agent that answers direct user queries about their portfolio or the market. It enforces a strict output format to provide a two-layered answer (Summary and Deep Dive).
+Sample Prompt Template:
+"You are a sharp market analyst advising a specific investor.
+Profile: {profile_block}
+Portfolio: {portfolio_context}
+Signals: {signals}
+News: {news}
+Rules:
+1. ALWAYS answer in two distinct layers separated by the exact marker '---DIG_DEEPER---'.
+2. Layer 1: A 1-2 sentence sharp, actionable answer.
+3. Layer 2: Analysis, data, context, and nuance.
+Output plain text WITH the '---DIG_DEEPER---' marker."
+
+6. Backend Jobs and Cron Schedules (Inngest)
+--------------------------------------------
+A. Macro Sync (macroSyncJob)
+* Schedule: Weekdays at 8:30 PM IST.
+* Function: Fetches Nifty, Sensex, and FII/DII net flows.
+
+B. Price Sync (priceSyncJob)
+* Schedule: Weekdays at 4:00 PM IST (post-market close).
+* Function: Updates EOD stock prices in the stock_prices table for chart rendering.
+
+C. Signal Fetch (signalFetchJob)
+* Schedule: Every 15 minutes on weekdays.
+* Function: Polls NSE bulk/block/insider deals. Checks deals against the Signal Detector agent. Steps are executed with a 5-second pacing delay to avoid Google AI rate limit exhaustion. Only triggers Alert Priority agent for users holding or watching the affected stock.
+
+D. Daily Brief (dailyBriefJob)
+* Schedule: Weekdays at 8:00 AM IST.
+* Function: Aggregates everything into the daily_briefs table for users to read when they wake up.
+
+E. Chat Processor (chatProcessJob)
+* Trigger: Event-driven (app/chat.message).
+* Function: Streaming response generator. Retries on 429 quota errors. Saves the output to chat_messages under plain and deeper columns.
+
+7. Architectural Decisions of Note
+----------------------------------
+* Manual Math over AI for Exact Calculations: Previously, an AI agent (portfolio-context.ts) was tasked with calculating portfolio Total Value, PnL, and sector allocations. This led to "Invalid JSON" truncation errors and hallucinations. The architecture was deliberately shifted to calculate these metrics using raw JavaScript math. The exact calculations are then fed into the AI Chat agent as context, ensuring 100% mathematical accuracy while retaining AI analytical power.
+* Two-Layer UI Architecture for Chat: LLM responses are typically walls of text. By enforcing the '---DIG_DEEPER---' marker in the system prompt, the backend splits the string before saving. The iOS app then presents Layer 1 immediately, keeping the interface clean, while hiding the complex Layer 2 behind an expandable "Dig deeper" button.
+* Inngest Step Architecture for Signals: Evaluating 20 signals for 10 users requires up to 200 LLM calls. Vercel serverless functions die after 60 seconds. By wrapping each signal evaluation in an `inngest.step.run()`, the state is saved to the database after each signal, and the 60-second timeout is reset.
+
+8. Frontend App Pages (iOS)
+---------------------------
+A. Splash Screen (SplashView)
+* Data: None. purely aesthetic entrance.
+* Function: Displays the brand and determines authentication state.
+
+B. Authentication / Onboarding (LoginView & OnboardingView)
+* Data: Writes to Supabase Auth and user_profiles.
+* Function: Captures risk tolerance, investment timeline, and goals to build the profile_block used as context by all agents.
+
+C. Dashboard (Home Tab)
+* Data Source: Reads macro_indicators, daily_briefs, signals, and stock_prices directly from Supabase via PostgREST.
+* Processing: Calculates aggregated portfolio state dynamically or relies on pre-calculated data. Presents the AI-generated Daily Brief prominently.
+
+D. Ask Analyst (AskView)
+* Data Source: Reads and writes to chat_messages table.
+* Function: User types a query. App inserts a row with status 'pending' and triggers an Inngest event. Real-time Supabase listeners wait for the status to change to 'done' and then render the 'plain' and 'deeper' text fields.
+
+E. Asset/Ticker Details
+* Data Source: Reads stock_prices for historical charts and company_fundamentals for metrics like PE and ROE.
+* Function: Renders a custom path-filled SwiftUI chart with interactive drag gestures to view historical price points. 
+
+9. Storage and Database Schema Highlights
+-----------------------------------------
+* company_fundamentals: Stores static/slow-moving stats (PE, ROE, Sector).
+* macro_indicators: Daily row of market health.
+* signals: Stores the raw JSON from exchange APIs alongside the AI's plain_summary and significance_score.
+* user_holdings: Tracks ticker, qty, and average buy price.
+* chat_messages: Stores the dual-layered AI conversation history.
+
+10. Conclusion
+--------------
+Stoqk operates by cleanly separating hard data ingestion from AI interpretation. The background pipeline works tirelessly to fetch raw data and score it, saving pristine insights into the database. The iOS client remains incredibly lightweight, acting simply as a real-time viewing glass into the Supabase database where the AI-curated intelligence sits waiting.
