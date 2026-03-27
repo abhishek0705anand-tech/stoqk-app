@@ -2,238 +2,1538 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Stoqk Architecture Documentation</title>
+  <title>Stoqk — Complete Architecture Documentation</title>
   <style>
+    :root {
+      --brand: #00ba87;
+      --brand-light: #e6faf5;
+      --ink: #0f1623;
+      --ink2: #3a4455;
+      --ink3: #6b7a94;
+      --rule: #e8ecf2;
+      --bg: #ffffff;
+      --bg2: #f7f9fc;
+      --bg3: #eef1f7;
+      --code-bg: #f0f4ff;
+      --code-color: #3b4eb8;
+      --red: #e84b4b;
+      --amber: #f59e0b;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 40px;
-      background: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.65;
     }
-    h1, h2, h3 { color: #111; margin-top: 2em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-    h1 { border-bottom: 2px solid #333; }
-    p, ul, ol { margin-bottom: 1.2em; font-size: 15px; }
-    ul, ol { padding-left: 20px; }
-    li { margin-bottom: 8px; }
-    strong { color: #000; }
-    code { 
-      background: #f5f5f5; 
-      padding: 2px 6px; 
-      border-radius: 4px; 
-      font-family: Monaco, Consolas, monospace;
-      font-size: 13px;
-      color: #c7254e;
+    /* ── Layout ── */
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 240px; background: var(--ink); overflow-y: auto;
+      padding: 24px 0; z-index: 100;
     }
-    blockquote {
-      border-left: 4px solid #4CAF50;
-      margin: 0;
-      padding: 10px 20px;
-      background: #f9fdf9;
-      color: #2c5e2e;
-      font-style: italic;
-      border-radius: 0 8px 8px 0;
+    .sidebar-logo {
+      padding: 0 20px 24px;
+      font-size: 18px; font-weight: 700; color: var(--brand);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      letter-spacing: -0.3px;
     }
-    .mermaid {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      border: 1px solid #eee;
-      margin: 20px 0;
-      text-align: center;
+    .sidebar-logo span { color: rgba(255,255,255,0.5); font-weight: 400; font-size: 12px; display: block; margin-top: 2px; }
+    .sidebar nav { padding: 16px 0; }
+    .nav-section { padding: 16px 20px 6px; font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; }
+    .sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: rgba(255,255,255,0.6); text-decoration: none; transition: all 0.15s; border-left: 2px solid transparent; }
+    .sidebar a:hover { color: #fff; background: rgba(255,255,255,0.05); border-left-color: var(--brand); }
+    .main { margin-left: 240px; padding: 0; }
+    .hero {
+      background: linear-gradient(135deg, var(--ink) 0%, #1a2540 100%);
+      padding: 64px 64px 56px;
+      border-bottom: 1px solid var(--rule);
     }
-    @media print {
-      body { padding: 0; max-width: 100%; }
-      .mermaid { border: none; background: transparent; }
+    .hero h1 { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1.1; }
+    .hero h1 span { color: var(--brand); }
+    .hero p { font-size: 16px; color: rgba(255,255,255,0.6); margin-top: 12px; max-width: 680px; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+    .pill.green { background: rgba(0,186,135,0.15); border-color: rgba(0,186,135,0.3); color: var(--brand); }
+    .content { padding: 56px 64px; max-width: 1100px; }
+    /* ── Typography ── */
+    h2 { font-size: 26px; font-weight: 700; color: var(--ink); margin: 56px 0 6px; letter-spacing: -0.5px; padding-bottom: 12px; border-bottom: 2px solid var(--rule); }
+    h2:first-of-type { margin-top: 0; }
+    h3 { font-size: 17px; font-weight: 600; color: var(--ink); margin: 32px 0 10px; }
+    h4 { font-size: 14px; font-weight: 600; color: var(--ink2); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    p { font-size: 15px; color: var(--ink2); margin-bottom: 14px; }
+    ul, ol { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; color: var(--ink2); margin-bottom: 6px; }
+    strong { color: var(--ink); font-weight: 600; }
+    code {
+      background: var(--code-bg); color: var(--code-color);
+      padding: 2px 7px; border-radius: 5px;
+      font-family: "SF Mono", Monaco, Consolas, monospace; font-size: 12.5px;
+    }
+    pre {
+      background: var(--ink); color: #e2e8f0;
+      padding: 20px 24px; border-radius: var(--radius);
+      font-family: "SF Mono", Monaco, Consolas, monospace; font-size: 13px;
+      line-height: 1.6; overflow-x: auto; margin: 16px 0;
+    }
+    pre .c { color: #718096; } /* comment */
+    pre .k { color: var(--brand); } /* keyword */
+    pre .s { color: #fc8181; } /* string */
+    pre .n { color: #90cdf4; } /* name */
+    /* ── Cards ── */
+    .card { background: var(--bg2); border: 1px solid var(--rule); border-radius: var(--radius); padding: 24px; margin: 16px 0; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+    .card h3 { margin-top: 0; font-size: 15px; }
+    .card p { margin-bottom: 0; font-size: 14px; }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .badge.green { background: #dcfce7; color: #166534; }
+    .badge.blue  { background: #dbeafe; color: #1e40af; }
+    .badge.amber { background: #fef3c7; color: #92400e; }
+    .badge.red   { background: #fee2e2; color: #991b1b; }
+    .badge.purple{ background: #ede9fe; color: #5b21b6; }
+    /* ── Agent box ── */
+    .agent-box {
+      border: 1px solid var(--rule); border-radius: var(--radius);
+      margin: 24px 0; overflow: hidden;
+    }
+    .agent-header {
+      padding: 16px 24px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .agent-header .icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .agent-header h3 { margin: 0; font-size: 16px; }
+    .agent-header .path { font-size: 12px; color: var(--ink3); font-family: monospace; margin-top: 2px; }
+    .agent-body { padding: 20px 24px; }
+    .agent-body h4 { margin-top: 0; }
+    .io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+    .io-box { background: var(--bg2); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; }
+    .io-box h5 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink3); margin-bottom: 8px; }
+    .io-box ul { margin: 0; padding-left: 16px; }
+    .io-box li { font-size: 13px; margin-bottom: 4px; }
+    .prompt-box {
+      background: #fffbf0; border: 1px solid #f6d860; border-radius: 8px;
+      padding: 16px 18px; margin: 12px 0;
+      font-size: 13px; color: #78350f; font-style: italic; line-height: 1.7;
+    }
+    .prompt-box strong { color: #92400e; font-style: normal; }
+    /* ── Table ── */
+    .db-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+    .db-table th { background: var(--ink); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; }
+    .db-table th:first-child { border-radius: 8px 0 0 0; }
+    .db-table th:last-child { border-radius: 0 8px 0 0; }
+    .db-table td { padding: 9px 14px; border-bottom: 1px solid var(--rule); color: var(--ink2); vertical-align: top; }
+    .db-table tr:hover td { background: var(--bg2); }
+    .db-table .pk { color: var(--amber); font-weight: 600; }
+    .db-table .fk { color: var(--blue); }
+    .db-table .type { font-family: monospace; font-size: 12px; color: var(--purple); }
+    /* ── Mermaid ── */
+    .diagram {
+      background: var(--bg2); border: 1px solid var(--rule);
+      border-radius: var(--radius); padding: 24px;
+      margin: 20px 0; text-align: center; overflow-x: auto;
+    }
+    .diagram-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink3); margin-bottom: 12px; }
+    /* ── Flow steps ── */
+    .flow-steps { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+    .flow-steps li {
+      counter-increment: step;
+      padding: 12px 16px 12px 52px; position: relative;
+      border-left: 2px solid var(--brand-light); margin-bottom: 2px;
+      font-size: 14px; color: var(--ink2);
+    }
+    .flow-steps li::before {
+      content: counter(step);
+      position: absolute; left: -14px; top: 10px;
+      width: 26px; height: 26px; background: var(--brand);
+      color: white; border-radius: 50%; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .flow-steps li:last-child { border-left-color: transparent; }
+    /* ── Cron table ── */
+    .cron-row { display: grid; grid-template-columns: 160px 130px 1fr; gap: 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+    .cron-row:last-child { border-bottom: none; }
+    .cron-id { font-family: monospace; font-size: 12px; background: var(--code-bg); color: var(--code-color); padding: 3px 8px; border-radius: 5px; }
+    .cron-sched { font-family: monospace; font-size: 12px; color: var(--purple); }
+    /* ── Section divider ── */
+    .section-intro { background: var(--brand-light); border-left: 4px solid var(--brand); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 24px; font-size: 14px; color: #065f46; }
+    /* ── Callout ── */
+    .callout { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 14px; }
+    .callout.info  { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
+    .callout.warn  { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .callout.green { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
+    /* ── RLS badge ── */
+    .rls { font-size: 11px; font-weight: 600; background: #fef9c3; color: #854d0e; border: 1px solid #fde047; border-radius: 4px; padding: 1px 6px; }
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--rule); margin: 48px 0; }
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .content { padding: 32px 24px; }
+      .hero { padding: 40px 24px; }
+      .io-grid { grid-template-columns: 1fr; }
+      .cron-row { grid-template-columns: 1fr; gap: 4px; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>
-    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose',
+      themeVariables: { primaryColor: '#00ba87', primaryTextColor: '#0f1623', lineColor: '#6b7a94', fontSize: '13px' }
+    });
   </script>
 </head>
 <body>
 
-<h1>Stoqk App - Complete Architecture & System Documentation</h1>
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Stoqk <span>Architecture Docs</span></div>
+  <nav>
+    <div class="nav-section">Overview</div>
+    <a href="#overview">System Overview</a>
+    <a href="#stack">Technology Stack</a>
+    <a href="#dataflow">Master Data Flow</a>
 
-<p>Stoqk is a next-generation "AI-native" investing application designed to act as a highly personalized, intelligent market analyst for retail investors. Unlike traditional brokerage apps that simply present raw price charts and news feeds, Stoqk actively processes market events, macro-economic indicators, and news through Large Language Models (LLMs). It contextualizes this raw data against the specific user's investment profile, goals, and portfolio holdings to deliver actionable, tailored insights rather than generic advice.</p>
+    <div class="nav-section">Backend</div>
+    <a href="#api">API Endpoints</a>
+    <a href="#agents">AI Agents</a>
+    <a href="#jobs">Inngest Jobs</a>
+    <a href="#libs">Libraries</a>
 
-<p>The system is built on a decoupled, serverless architecture:</p>
-<ul>
-  <li><strong>Frontend:</strong> A native iOS application built with SwiftUI, focusing on fluid animations, premium aesthetics, and responsive charts.</li>
-  <li><strong>Backend:</strong> A Node.js (TypeScript) serverless environment hosted on Vercel.</li>
-  <li><strong>Database & Auth:</strong> Supabase (PostgreSQL) is used as the primary data store and authentication provider, leveraging Row Level Security (RLS) for direct client-to-database communication.</li>
-  <li><strong>Orchestration:</strong> Inngest drives all background jobs, cron schedules, and asynchronous AI workflows, easily bypassing Vercel's standard execution limits.</li>
-  <li><strong>AI Engine:</strong> Google Gemini 2.0 Flash handles rapid text generation, signal scoring, and conversational analysis.</li>
-</ul>
+    <div class="nav-section">Database</div>
+    <a href="#tables">Supabase Tables</a>
+    <a href="#rls">Row-Level Security</a>
+    <a href="#datalife">Data Lifecycle</a>
 
-<h2>1. Overall System Data Flow</h2>
-<div class="mermaid">
-graph TD
-    %% Frontend Layer
-    subgraph Frontend [iOS App - SwiftUI]
-        UI[User Interface]
-        State[AppState / Combine]
-        Charts[Native Stock Charts]
-    end
+    <div class="nav-section">iOS App</div>
+    <a href="#ios-arch">App Architecture</a>
+    <a href="#ios-screens">Screens</a>
+    <a href="#ios-flows">User Flows</a>
 
-    %% Database Layer
-    subgraph DataStore [Supabase - PostgreSQL]
-        DB[(PostgreSQL DB)]
-        Auth[Supabase Auth]
-    end
+    <div class="nav-section">Decisions</div>
+    <a href="#decisions">Key Decisions</a>
+    <a href="#external">External Services</a>
+  </nav>
+</aside>
 
-    %% Orchestration Layer
-    subgraph Orchestration [Inngest Pipeline]
-        Cron[Scheduled Cron Jobs]
-        Events[Event Triggers]
-    end
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
 
-    %% Backend Layer
-    subgraph Serverless [Vercel Node.js Backend]
-        Agents[AI Agents]
-        DataFetch[Data Fetchers]
-    end
-
-    %% External Services
-    subgraph External [External Services]
-        NSE[NSE India API]
-        Yahoo[Yahoo Finance API]
-        Gemini[Google Gemini 2.0]
-        APNS[Apple Push Notifications]
-    end
-
-    %% Connections
-    UI <--> State
-    State <-->|Reads Data Locally| DB
-    State <--> Auth
-    UI -->|Trigger Chat| Events
-
-    DB -->|Triggers| Events
-    Cron --> Serverless
-    Events --> Serverless
-
-    Serverless <-->|Fetch Deal Data/Prices| NSE
-    Serverless <-->|Fetch Fundamentals| Yahoo
-    Serverless <-->|Process Insights| Gemini
-    Serverless -->|Push Alerts| APNS
-    Serverless -->|Store Processed Data| DB
+<!-- HERO -->
+<div class="hero">
+  <h1>Stoqk — <span>System Architecture</span></h1>
+  <p>Complete technical reference: AI agents, database schema, Inngest jobs, iOS app, data flows, and every architectural decision that shapes the system.</p>
+  <div class="pill-row">
+    <span class="pill green">SwiftUI iOS</span>
+    <span class="pill green">Node.js / Hono</span>
+    <span class="pill green">Supabase Postgres</span>
+    <span class="pill green">Inngest</span>
+    <span class="pill green">Gemini 2.0 Flash</span>
+    <span class="pill">NSE India</span>
+    <span class="pill">Yahoo Finance</span>
+    <span class="pill">APNs</span>
+    <span class="pill">Vercel</span>
+  </div>
 </div>
 
-<h2>2. Technology Stack & Key Decisions</h2>
-<ul>
-  <li><strong>Native iOS (SwiftUI):</strong> Chose native development over cross-platform (React Native/Flutter) to ensure the highest possible UI quality, leveraging native components like Apple's <code>Charts</code> framework for smooth, interactive data visualization and <code>Haptics</code> for premium user feedback.</li>
-  <li><strong>Serverless Node.js (Vercel):</strong> Ensures the backend can scale from zero to thousands of requests instantly. The backend strictly focuses on heavy data scraping and AI processing.</li>
-  <li><strong>Supabase (BaaS):</strong> Eliminates the need for a massive traditional REST API. The iOS app utilizes PostgREST to directly query tables (like <code>daily_briefs</code> and <code>stock_prices</code>), secured by RLS policies so users only see their own data.</li>
-  <li><strong>Inngest:</strong> Vercel functions famously terminate after 15 to 60 seconds. Since AI operations and mass data syncing can take minutes, Inngest breaks these long-running tasks into isolated "Steps." If a step fails, Inngest automatically retries just that step without losing progress.</li>
-  <li><strong>Google Gemini 2.0 Flash:</strong> Chosen as the primary LLM over OpenAI or Claude due to its massive context window (allowing us to feed it the user's entire portfolio alongside market news) and extremely fast time-to-first-token.</li>
-</ul>
+<div class="content">
 
-<h2>3. Frontend Application Breakdown (iOS)</h2>
-<p>The iOS app is structured into feature-based views, managed by a centralized <code>AppState</code> observable object.</p>
-<ul>
-  <li><strong>SplashView:</strong> The initial launch screen featuring an animated braided logo and application title. Uses a <code>ZStack</code> with opacity and scale animations to seamlessly transition.</li>
-  <li><strong>LoginView & OnboardingView:</strong> Handles user authentication. Post-login, new users complete an onboarding survey assessing their risk tolerance, investment timeline, and financial goals. This generates the <code>profile_block</code> string, heavily utilized by the backend AI agents.</li>
-  <li><strong>MainTabView (Dashboard):</strong> The core hub.
+<!-- ═══════════════ 1. OVERVIEW ═══════════════ -->
+<h2 id="overview">1. System Overview</h2>
+
+<p>Stoqk is an AI-native investing assistant for Indian retail investors. Rather than showing raw price data, it continuously processes NSE market events through specialized AI agents, personalizes the output against each user's portfolio and risk profile, and delivers actionable insights — push notifications, morning briefs, and conversational analysis.</p>
+
+<div class="diagram">
+  <div class="diagram-label">High-level system layers</div>
+  <div class="mermaid">
+graph TB
+    subgraph iOS ["📱 iOS App (SwiftUI)"]
+        direction LR
+        UI[Views] --> AS[AppState]
+        AS --> AC[APIClient]
+    end
+
+    subgraph Vercel ["☁️ Vercel — Node.js / Hono"]
+        direction LR
+        Routes[REST Routes] --> Auth[Auth Middleware]
+        Auth --> Agents[AI Agents]
+        Auth --> Libs[Data Libraries]
+    end
+
+    subgraph Inngest ["⚙️ Inngest — Job Orchestration"]
+        direction LR
+        Cron[Cron Triggers] --> Jobs[Background Jobs]
+        Events[Event Triggers] --> Jobs
+    end
+
+    subgraph Supabase ["🗄️ Supabase — Postgres + Auth"]
+        direction LR
+        PG[(PostgreSQL)] --- RLS[RLS Policies]
+        SAu[Auth Service]
+    end
+
+    subgraph External ["🌐 External Services"]
+        direction LR
+        NSE[NSE India API]
+        Yahoo[Yahoo Finance]
+        Gemini[Gemini 2.0 Flash]
+        APNS[Apple APNs]
+        News[NewsAPI]
+    end
+
+    AC -->|REST + JWT| Routes
+    iOS -->|JWT Auth| SAu
+    Vercel -->|upsert / query| PG
+    Inngest -->|step.run| Vercel
+    Vercel -->|sendEvent| Inngest
+    Vercel <-->|fetch| NSE
+    Vercel <-->|fetch| Yahoo
+    Vercel <-->|generate| Gemini
+    Vercel -->|push| APNS
+    Vercel <-->|headlines| News
+  </div>
+</div>
+
+<h2 id="stack">2. Technology Stack</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>📱 Native iOS (SwiftUI)</h3>
+    <p>Chosen over React Native / Flutter for native <code>Charts</code> framework, <code>Haptics</code>, and <code>UserNotifications</code>. All state managed via <code>@StateObject</code> + Combine. Zero third-party UI libraries.</p>
+  </div>
+  <div class="card">
+    <h3>☁️ Vercel + Hono</h3>
+    <p>Hono is a tiny, fast web framework that runs natively on Vercel's Edge/Serverless runtime. The backend is strictly a data processor — scraping, AI calls, push delivery. No UI concerns.</p>
+  </div>
+  <div class="card">
+    <h3>🗄️ Supabase</h3>
+    <p>Postgres with Row Level Security so the iOS app queries market tables (signals, prices) directly via PostgREST, while user tables are fully locked behind RLS. The backend uses a service-role key that bypasses RLS.</p>
+  </div>
+  <div class="card">
+    <h3>⚙️ Inngest</h3>
+    <p>Vercel functions die at 60 s. Inngest wraps long jobs in <code>step.run()</code> chunks — each chunk is independently retried on failure. No progress is lost. Concurrency limits prevent AI rate-limit storms.</p>
+  </div>
+  <div class="card">
+    <h3>🤖 Google Gemini 2.0 Flash</h3>
+    <p>Selected over GPT-4 / Claude for its 1M-token context window (entire portfolio + news fits), sub-second TTFT, and cost efficiency at scale. All 7 agents use the same model.</p>
+  </div>
+  <div class="card">
+    <h3>📊 NSE India + Yahoo Finance</h3>
+    <p>NSE for real-time deals, insider trades, OHLCV prices, FII/DII flows. Yahoo Finance as a reliable fallback for macro indices and as the primary source for company fundamentals.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ 3. MASTER DATA FLOW ═══════════════ -->
+<h2 id="dataflow">3. Master Data Flow</h2>
+
+<div class="diagram">
+  <div class="diagram-label">Complete end-to-end data flow</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant NSE as NSE India API
+    participant INN as Inngest Cron
+    participant BE as Vercel Backend
+    participant GEM as Gemini 2.0
+    participant DB as Supabase DB
+    participant APNS as Apple APNs
+    participant IOS as iOS App
+
+    Note over INN,BE: Every 15 min (weekdays)
+    INN->>BE: signal-fetch trigger
+    BE->>NSE: fetchBulkDeals / fetchInsiderTrades
+    NSE-->>BE: raw deal events
+    BE->>GEM: signal-detector prompt
+    GEM-->>BE: event_type, score, summary
+    BE->>DB: INSERT signals
+    BE->>DB: SELECT users holding/watching ticker
+    BE->>GEM: alert-priority prompt per user
+    GEM-->>BE: should_notify, push_copy, urgency
+    BE->>DB: INSERT user_notifications
+    BE->>APNS: sendPush(token, copy)
+    APNS->>IOS: push notification
+
+    Note over INN,BE: Daily 7:30am IST (weekdays)
+    INN->>BE: daily-brief trigger
+    BE->>DB: SELECT macro_indicators, signals
+    loop per user
+        BE->>DB: SELECT user_holdings, prices
+        BE->>GEM: daily-brief prompt
+        GEM-->>BE: JSON brief
+        BE->>DB: UPSERT daily_briefs
+    end
+
+    Note over IOS,DB: User opens app
+    IOS->>BE: GET /briefs/today (JWT)
+    BE->>DB: SELECT daily_briefs
+    DB-->>BE: brief_json
+    BE-->>IOS: { opening, market_snapshot, ... }
+
+    Note over IOS,DB: User sends chat message
+    IOS->>BE: POST /chat { message }
+    BE->>DB: INSERT chat_messages (pending)
+    BE->>INN: sendEvent app/chat.message
+    INN->>BE: chat-process job
+    BE->>DB: SELECT profile, holdings, signals
+    BE->>GEM: market-analyst-chat (streaming)
+    GEM-->>BE: stream chunks
+    BE->>DB: UPDATE chat_messages (done, plain, deeper)
+    IOS->>BE: GET /chat/result/:id (polling)
+    BE-->>IOS: { plain, deeper }
+  </div>
+</div>
+
+<!-- ═══════════════ 4. API ENDPOINTS ═══════════════ -->
+<h2 id="api">4. API Endpoints</h2>
+
+<div class="section-intro">All routes live under <code>/api/v1/</code> and require <code>Authorization: Bearer &lt;JWT&gt;</code> except internal routes which use <code>x-internal-key</code>.</div>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>Profile <span class="badge blue">3 routes</span></h3>
     <ul>
-      <li><em>Macro Section:</em> Displays the latest Nifty and Sensex values.</li>
-      <li><em>Portfolio Summary:</em> Aggregates the user's current holdings and displays total value and PnL.</li>
-      <li><em>Daily Brief:</em> Prominently displays the AI-generated morning briefing.</li>
+      <li><code>POST /profile/onboarding</code> — Complete onboarding, build profile_block</li>
+      <li><code>GET /profile/me</code> — Fetch user profile</li>
+      <li><code>PATCH /profile/me</code> — Update profile fields</li>
     </ul>
-  </li>
-  <li><strong>AskView (Market Analyst Chat):</strong> A sophisticated chat interface. When a user submits a query, it is written to the <code>chat_messages</code> table via Supabase with a <code>pending</code> status. A real-time listener waits for the backend to update to <code>done</code>.</li>
-  <li><strong>Asset Details (Stock Charts):</strong> Integrates Apple's <code>Charts</code> framework. By dragging across the line chart, users update a <code>selectedPoint</code> state that dynamically refreshes the displayed price.</li>
-</ul>
-
-<h2>4. Data Pipelines and Sources</h2>
-<p>Robust data pipelines are critical, as the AI is only as good as the context it receives.</p>
-<ul>
-  <li><strong>NSE India API (National Stock Exchange):</strong>
+  </div>
+  <div class="card">
+    <h3>Holdings <span class="badge blue">4 routes</span></h3>
     <ul>
-      <li><em>Bulk Deals, Block Deals, Insider Trading (PIT):</em> Fetched from NSE's market tracking endpoints. These raw events are the lifeblood for the Signal Detection agent.</li>
-      <li><em>Historical Price Data:</em> Fetched via the <code>NextApi/GetQuoteApi</code> endpoint. The backend implements a session cookie manager (<code>ensureNSESession</code>) that mimics a browser request to bypass NSE's strict 404/403 anti-bot protections.</li>
+      <li><code>GET /holdings</code> — List with live prices + PnL</li>
+      <li><code>PUT /holdings</code> — Upsert single holding</li>
+      <li><code>DELETE /holdings/:ticker</code></li>
+      <li><code>POST /holdings/bulk</code> — Replace all holdings</li>
     </ul>
-  </li>
-  <li><strong>Yahoo Finance (yahoo-finance2 library):</strong>
+  </div>
+  <div class="card">
+    <h3>Signals <span class="badge blue">3 routes</span></h3>
     <ul>
-      <li><em>Macro Indicators:</em> Fetches high-level indices (<code>^NSEI</code> for Nifty 50, <code>^BSESN</code> for Sensex), chosen for superior reliability over NSE's volatile index endpoints.</li>
-      <li><em>Company Fundamentals:</em> Scrapes PE Ratio, ROE, Debt/Equity, Market Cap, and Sector classifications.</li>
+      <li><code>GET /signals</code> — Paginated feed (filters: event_type, min_score, ticker)</li>
+      <li><code>POST /signals/for-tickers</code> — Signals for user's tickers</li>
+      <li><code>GET /signals/:id</code> — Single signal detail</li>
     </ul>
-  </li>
-</ul>
+  </div>
+  <div class="card">
+    <h3>Briefs &amp; Macro <span class="badge blue">3 routes</span></h3>
+    <ul>
+      <li><code>GET /briefs/today</code> — Today's personalized brief</li>
+      <li><code>GET /briefs/macro</code> — Latest Nifty / Sensex / FII</li>
+      <li><code>GET /briefs/history</code> — Last 14 briefs</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Chat <span class="badge green">async</span></h3>
+    <ul>
+      <li><code>POST /chat</code> — Enqueue message → returns job_id</li>
+      <li><code>GET /chat/result/:job_id</code> — Poll for plain + deeper</li>
+      <li><code>GET /chat/suggestions</code> — AI-suggested prompts</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Prices &amp; Fundamentals</h3>
+    <ul>
+      <li><code>GET /prices/history/:ticker</code> — 90 days OHLCV</li>
+      <li><code>GET /prices/fundamentals/:ticker</code> — PE, ROE, D/E, Market Cap</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Watchlist</h3>
+    <ul>
+      <li><code>GET /watchlist</code> — List with live prices + patterns</li>
+      <li><code>POST /watchlist</code> — Add ticker</li>
+      <li><code>DELETE /watchlist/:ticker</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>News</h3>
+    <ul>
+      <li><code>GET /news/:ticker</code> — NSE announcements + NewsAPI</li>
+      <li><code>GET /news/market/headlines</code> — Top market headlines</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Internal <span class="badge amber">x-internal-key</span></h3>
+    <ul>
+      <li><code>POST /internal/analyze-pattern</code> — Called by Python pattern scanner</li>
+      <li><code>POST /internal/devices</code> — Register APNs token (x-user-id header)</li>
+    </ul>
+  </div>
+</div>
 
-<h2>5. AI Agents and System Prompts</h2>
-<p>The underlying intelligence is distributed among specialized agents, each wrapped around a specific prompt matrix.</p>
+<!-- ═══════════════ 5. AI AGENTS ═══════════════ -->
+<h2 id="agents">5. AI Agents</h2>
 
-<h3>A. Signal Detector Agent (<code>signal-detector.ts</code>)</h3>
-<p><strong>Role:</strong> Evaluates raw corporate filings and determines if an event is significant enough for an investor to care about.</p>
-<blockquote>
-  "You are a sharp financial analyst evaluating raw exchange data.<br>
-  Event: {raw_data}<br>
-  Output a JSON object evaluating this event with:<br>
-  - event_type (string)<br>
-  - significance_score (1-100)<br>
-  - plain_summary (1-2 sentences)<br>
-  - historical_context (why this might matter)"
-</blockquote>
+<div class="section-intro">All agents use Google Gemini 2.0 Flash via <code>lib/anthropic.ts</code> (misnamed — it calls Google's SDK). <code>runAgent&lt;T&gt;()</code> returns structured JSON; <code>streamAgent()</code> streams text for chat.</div>
 
-<h3>B. Alert Priority Agent (<code>alert-priority.ts</code>)</h3>
-<p><strong>Role:</strong> Decides if an immediate Push Notification is warranted.</p>
-<blockquote>
-  "User Profile: {profile_block}<br>
-  Signal: {signal_summary}<br>
-  Holdings: {user_holdings}<br>
-  Decide if this user MUST receive a push notification right now. Output JSON with should_notify (boolean), urgency (low/med/high), and push_copy (string)."
-</blockquote>
+<!-- Agent 1: Signal Detector -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#f0fdf4">
+    <div class="icon" style="background:#dcfce7">🔍</div>
+    <div>
+      <h3>Signal Detector Agent</h3>
+      <div class="path">backend/src/agents/signal-detector.ts</div>
+    </div>
+    <span class="badge green" style="margin-left:auto">JSON output</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Receives a raw NSE exchange event (bulk deal, insider trade, block deal) and classifies it — assigning an event type, a significance score, a plain-language summary, and historical context. This is the first gate every market event passes through.</p>
 
-<h3>C. Daily Brief Agent (<code>daily-brief.ts</code>)</h3>
-<p><strong>Role:</strong> Synthesizes a personalized morning newsletter for the user.</p>
-<blockquote>
-  "You are the user's personal wealth manager.<br>
-  Macro Data: {macro_data}<br>
-  Portfolio Context: {portfolio_context}<br>
-  Active Signals: {active_signals}<br>
-  Write a 3-paragraph morning brief tailored exclusively for this user. Tone: Direct, concise, objective."
-</blockquote>
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>Raw NSE event object (deal data, amounts, parties)</li>
+          <li>User profile (experience_level, risk_tolerance, preferred_sectors)</li>
+          <li>Ticker symbol + current price</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output JSON</h5>
+        <ul>
+          <li><code>event_type</code> — bulk_deal | insider_buy | insider_sell | pledge_increase | pledge_reduction | promoter_buy | block_deal | qip</li>
+          <li><code>significance_score</code> — 0–100</li>
+          <li><code>plain_summary</code> — 2 sentences, calibrated to experience level</li>
+          <li><code>historical_context</code> — 1 sentence or null</li>
+        </ul>
+      </div>
+    </div>
 
-<h3>D. Market Analyst Chat Agent (<code>market-analyst-chat.ts</code>)</h3>
-<p><strong>Role:</strong> Interactive conversational agent. Enforces the <code>---DIG_DEEPER---</code> markdown constraint.</p>
-<blockquote>
-  "You are a sharp market analyst advising a specific investor.<br>
-  Profile: {profile_block}<br>
-  Portfolio: {portfolio_context}<br>
-  Sector Exposure: {sectorExposure}<br>
-  Rules:<br>
-  1. ALWAYS answer in two distinct layers separated by the exact marker '---DIG_DEEPER---'.<br>
-  2. Layer 1 (Summary): A 1-2 sentence sharp, actionable answer the user can read in 5 seconds.<br>
-  3. Layer 2 (Analysis): The 'meat' of the answer with data, nuance, and logic.<br>
-  Output plain text WITH the '---DIG_DEEPER---' marker separating the two sections."
-</blockquote>
+    <div class="prompt-box">
+      <strong>System prompt:</strong><br>
+      "You are a sharp financial analyst evaluating raw exchange data for Indian markets.<br>
+      Raw event: {raw_data}<br>
+      Calibrate language to: {experience_level}<br>
+      Score rules: base on deal size in crores + % of float + volume deviation vs 30-day avg.<br>
+      +15 if ticker in user's preferred sectors or top holdings. -10 if aggressive and risk_tolerance=low.<br>
+      Output strict JSON: { event_type, significance_score (0-100), plain_summary (2 sentences), historical_context (1 sentence if pattern historically preceded a price move, else null) }"
+    </div>
 
-<h2>6. Backend Scheduled Jobs (Inngest Cron)</h2>
-<ol>
-  <li><strong>Macro Sync (<code>macro-sync</code>):</strong> Weekdays at 8:30 PM IST. Pulls Nifty, Sensex, and computes FII/DII net flows. Runs at 8:30 PM to ensure exchanges have published the final daily capital flows.</li>
-  <li><strong>Price Sync (<code>price-sync</code>):</strong> Weekdays at 4:00 PM IST (post-market close). Downloads the latest End-of-Day Open, High, Low, Close, and Volume data.</li>
-  <li><strong>Signal Fetch (<code>signal-fetch</code>):</strong> Every 15 minutes, Monday through Friday. Polls NSE for real-time deals. Contains a 5-second pacing delay to bypass AI rate limits.</li>
-  <li><strong>Daily Brief Generator (<code>daily-brief-generator</code>):</strong> Weekdays at 8:00 AM IST. Iterates through all fully onboarded users, triggering the Daily Brief Agent.</li>
+    <h4>Scoring rubric</h4>
+    <ul>
+      <li><strong>80–100:</strong> High — deal &gt;₹500Cr, promoter pledge reduction, insider buy of 5%+ float</li>
+      <li><strong>60–79:</strong> Medium — bulk deal ₹50–500Cr, block deal with institutional buyer</li>
+      <li><strong>0–59:</strong> Low — small deal, routine filing, non-material pledge</li>
+    </ul>
+
+    <div class="diagram">
+      <div class="mermaid">
+flowchart LR
+    A[NSE Raw Event] --> B{Signal Detector}
+    B --> C[event_type classification]
+    B --> D[significance_score 0-100]
+    B --> E[plain_summary]
+    B --> F[historical_context]
+    C & D & E & F --> G[INSERT signals table]
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Agent 2: Alert Priority -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#eff6ff">
+    <div class="icon" style="background:#dbeafe">🔔</div>
+    <div>
+      <h3>Alert Priority Agent</h3>
+      <div class="path">backend/src/agents/alert-priority.ts</div>
+    </div>
+    <span class="badge blue" style="margin-left:auto">JSON output</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Given a scored signal and a specific user, decides whether to fire a push notification. Also writes the push copy (≤80 chars) calibrated to the user's experience level.</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>Signal object (event_type, score, summary)</li>
+          <li>User profile (experience_level, risk_tolerance)</li>
+          <li>User's holdings tickers array</li>
+          <li>User's watchlist tickers array</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output JSON</h5>
+        <ul>
+          <li><code>should_notify</code> — boolean</li>
+          <li><code>push_copy</code> — ≤80 character string</li>
+          <li><code>urgency</code> — high | medium | low</li>
+          <li><code>reason</code> — explanation string</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="prompt-box">
+      <strong>System prompt:</strong><br>
+      "User profile: {profile_block}<br>
+      Signal: {signal_summary} (score: {significance_score})<br>
+      User holds: {holdings_tickers}. User watches: {watchlist_tickers}.<br>
+      Rules: Always notify if ticker in top_holdings. Notify if watchlist AND score&gt;50. Notify if score&gt;70.<br>
+      Urgency: 'high' if score&gt;80, 'medium' if 60–80, 'low' below.<br>
+      Push copy: ≤80 chars. Beginner: plain English. Advanced/Trader: use price, volume, float %."
+    </div>
+
+    <h4>Decision matrix</h4>
+    <table class="db-table">
+      <tr><th>Condition</th><th>Notify?</th><th>Urgency</th></tr>
+      <tr><td>Ticker is in user's top_holdings</td><td><span class="badge green">Always</span></td><td>Derived from score</td></tr>
+      <tr><td>Ticker on watchlist AND score &gt; 50</td><td><span class="badge green">Yes</span></td><td>Derived from score</td></tr>
+      <tr><td>Score &gt; 70 (any ticker)</td><td><span class="badge green">Yes</span></td><td>Derived from score</td></tr>
+      <tr><td>Score ≤ 70 AND not in holdings/watchlist</td><td><span class="badge red">No</span></td><td>—</td></tr>
+    </table>
+
+    <h4>Push copy examples by experience level</h4>
+    <ul>
+      <li><strong>Beginner:</strong> "A large fund just bought ₹320Cr of your Tata Motors. Usually a good sign."</li>
+      <li><strong>Intermediate:</strong> "Block deal: TATAMOTORS ₹320Cr by HDFC MF. Significance score: 74."</li>
+      <li><strong>Trader:</strong> "TATAMOTORS block: 1.2Cr sh @ ₹267, HDFC MF. Float: 1.8%. Score: 74."</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Agent 3: Daily Brief -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#fefce8">
+    <div class="icon" style="background:#fef9c3">📰</div>
+    <div>
+      <h3>Daily Brief Agent</h3>
+      <div class="path">backend/src/agents/daily-brief.ts</div>
+    </div>
+    <span class="badge amber" style="margin-left:auto">JSON output</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Synthesizes a personalized morning market summary for each user every weekday at 7:30 AM IST. Combines macro data, the user's portfolio performance, and the day's top signals into 6 structured fields.</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>User profile (profile_block)</li>
+          <li>Top 5 signals from past 24 hours</li>
+          <li>Latest macro_indicators row (Nifty, Sensex, FII/DII)</li>
+          <li>Portfolio context JSON (from portfolio-context agent)</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output JSON</h5>
+        <ul>
+          <li><code>opening</code> — One striking market fact</li>
+          <li><code>market_snapshot</code> — Nifty/Sensex move + explanation</li>
+          <li><code>fii_dii</code> — Net flows in crores</li>
+          <li><code>top_signal</code> — Highest-score signal summary</li>
+          <li><code>portfolio_update</code> — Best/worst holding + total PnL (null if no holdings)</li>
+          <li><code>watch_today</code> — Single most important action sentence</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="prompt-box">
+      <strong>System prompt:</strong><br>
+      "You are the user's personal wealth manager delivering a morning brief.<br>
+      Macro: Nifty {nifty_close} ({nifty_change_pct}%), Sensex {sensex_close}. FII: ₹{fii_net_cr}Cr, DII: ₹{dii_net_cr}Cr.<br>
+      Top signals from past 24h: {signals_block}<br>
+      Portfolio: {portfolio_context}<br>
+      Tone: {experience_level == beginner ? 'Reassuring, no jargon, warm' : experience_level == trader ? 'Direct, fast, numbers-first' : 'Factual and clear'}<br>
+      Output strict JSON with fields: opening, market_snapshot, fii_dii, top_signal, portfolio_update, watch_today."
+    </div>
+
+    <h4>Stored in <code>daily_briefs</code></h4>
+    <p>Each user gets one row per date. If they already have a row, it is upserted. The iOS app reads <code>brief_json</code> and renders each field as a separate card section.</p>
+  </div>
+</div>
+
+<!-- Agent 4: Portfolio Context -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#f5f3ff">
+    <div class="icon" style="background:#ede9fe">📊</div>
+    <div>
+      <h3>Portfolio Context Builder</h3>
+      <div class="path">backend/src/agents/portfolio-context.ts</div>
+    </div>
+    <span class="badge purple" style="margin-left:auto">Pure TypeScript — no AI</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Builds a precise mathematical summary of the user's portfolio. Critically — this is <em>not</em> an AI call. The AI was originally asked to compute these numbers and produced hallucinated PnL figures. All math is now done in TypeScript and the result is injected as trusted context into other agents.</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>user_holdings rows (ticker, qty, avg_buy_price)</li>
+          <li>Live prices map (ticker → current_price)</li>
+          <li>Active signals on holding tickers (last 24h)</li>
+          <li>company_fundamentals for sector lookup</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output JSON</h5>
+        <ul>
+          <li><code>total_current_value</code> — ₹ sum</li>
+          <li><code>total_unrealised_pnl</code> — ₹ amount</li>
+          <li><code>total_unrealised_pnl_pct</code> — %</li>
+          <li><code>top_gainer</code> — { ticker, pnl_pct }</li>
+          <li><code>top_loser</code> — { ticker, pnl_pct }</li>
+          <li><code>sector_exposure</code> — { IT: 45, Banking: 35, … }</li>
+          <li><code>active_signals_on_holdings</code> — filtered signal array</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <strong>Why no AI here?</strong> During development, Gemini was asked to compute total value from a holdings array. It would round differently, conflate cost basis, or simply produce wrong totals. The portfolio context builder is pure arithmetic — every number is verifiable — then the <em>result</em> is given to the AI as read-only fact.
+    </div>
+
+    <h4>Sector mapping (hardcoded)</h4>
+    <p>Since live sector data can be slow to fetch, a static map in <code>lib/profile.ts</code> covers all 45 tracked tickers: <code>INFY → IT</code>, <code>HDFCBANK → Banking</code>, <code>SUNPHARMA → Pharma</code>, <code>TATAMOTORS → Auto</code>, etc. Company fundamentals table fills in the rest.</p>
+  </div>
+</div>
+
+<!-- Agent 5: Market Analyst Chat -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#fff1f2">
+    <div class="icon" style="background:#ffe4e6">💬</div>
+    <div>
+      <h3>Market Analyst Chat Agent</h3>
+      <div class="path">backend/src/agents/market-analyst-chat.ts</div>
+    </div>
+    <span class="badge red" style="margin-left:auto">Streaming text output</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> The conversational core. Takes a user's question and answers in two mandatory layers separated by <code>---DIG_DEEPER---</code>. Layer 1 is a 1–2 sentence actionable summary. Layer 2 is the full analysis with data, caveats, and news references.</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>User message (question text)</li>
+          <li>profile_block (compiled text)</li>
+          <li>Portfolio context JSON</li>
+          <li>Active signals on holdings (last 7 days)</li>
+          <li>NSE announcements for mentioned tickers</li>
+          <li>NewsAPI headlines for mentioned tickers</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output (streaming text)</h5>
+        <pre style="font-size:11px;padding:10px;margin:0">[1–2 sentence summary]
+---DIG_DEEPER---
+[3–5 sentence analysis
+with data, caveats, sources]</pre>
+        <p style="margin-top:8px;font-size:13px">Backend splits on marker → saves as <code>plain</code> + <code>deeper</code> in chat_messages table.</p>
+      </div>
+    </div>
+
+    <div class="prompt-box">
+      <strong>System prompt:</strong><br>
+      "You are a sharp market analyst advising a specific Indian investor.<br>
+      Profile: {profile_block}<br>
+      Portfolio: {portfolio_context}<br>
+      Active signals on holdings: {signals_block}<br>
+      Recent news: {search_results}<br>
+      Rules:<br>
+      1. ALWAYS answer in two layers separated by the exact marker '---DIG_DEEPER---'.<br>
+      2. Layer 1: 1–2 sentence sharp, actionable answer (5-second read).<br>
+      3. Layer 2: Full analysis with numbers, context, source citations.<br>
+      4. Never give direct buy/sell advice. Be honest about data gaps.<br>
+      5. If user asks about a stock you have news for, cite the source."
+    </div>
+
+    <div class="diagram">
+      <div class="mermaid">
+sequenceDiagram
+    participant iOS as iOS AskView
+    participant BE as Backend
+    participant INN as Inngest
+    participant GEM as Gemini (stream)
+    participant DB as Supabase
+
+    iOS->>BE: POST /chat { message }
+    BE->>DB: INSERT chat_messages (status=pending)
+    BE-->>iOS: { job_id }
+    BE->>INN: sendEvent(app/chat.message, {job_id})
+    INN->>BE: chat-process job
+    BE->>DB: SELECT profile + holdings + signals
+    BE->>GEM: streamAgent(prompt + context)
+    GEM-->>BE: token stream
+    BE->>BE: collect stream → split on ---DIG_DEEPER---
+    BE->>DB: UPDATE chat_messages SET plain, deeper, status=done
+    iOS->>BE: GET /chat/result/:job_id (polling every 1.5s)
+    BE-->>iOS: { plain, deeper, status: done }
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Agent 6: Chart Pattern -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#f0fdf4">
+    <div class="icon" style="background:#dcfce7">📈</div>
+    <div>
+      <h3>Chart Pattern Agent</h3>
+      <div class="path">backend/src/agents/chart-pattern.ts</div>
+    </div>
+    <span class="badge green" style="margin-left:auto">JSON output</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Takes a technically-detected pattern (e.g., "Double Top", "Golden Cross") and explains it in plain language appropriate to the user's level. Called by the internal route after the Python pattern scanner detects a pattern via TA-Lib.</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input</h5>
+        <ul>
+          <li>Ticker symbol</li>
+          <li>Pattern name (from TA-Lib)</li>
+          <li>Last 30 sessions of OHLCV data</li>
+          <li>User profile (experience_level, investment_horizon)</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output JSON</h5>
+        <ul>
+          <li><code>plain_explanation</code> — language calibrated to level</li>
+          <li><code>what_to_watch</code> — specific price level or trigger</li>
+          <li><code>historical_win_rate</code> — % (researched by AI)</li>
+          <li><code>avg_move_pct</code> — average expected move</li>
+          <li><code>horizon_note</code> — relevance to user's investment timeline</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4>Explanation calibration</h4>
+    <ul>
+      <li><strong>Beginner:</strong> Analogy-first, no technical terms. "This pattern looks like the letter M…"</li>
+      <li><strong>Intermediate:</strong> Psychology behind the pattern — supply/demand, support/resistance</li>
+      <li><strong>Advanced/Trader:</strong> Volume confirmation, RSI divergence, float context, entry/stop levels</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Agent 7: Profile Builder -->
+<div class="agent-box">
+  <div class="agent-header" style="background:#eff6ff">
+    <div class="icon" style="background:#dbeafe">👤</div>
+    <div>
+      <h3>Profile Builder Agent</h3>
+      <div class="path">backend/src/agents/profile-builder.ts</div>
+    </div>
+    <span class="badge blue" style="margin-left:auto">Deterministic — no AI</span>
+  </div>
+  <div class="agent-body">
+    <p><strong>Role:</strong> Converts the onboarding form answers into two things: a <code>profile_record</code> (structured columns for the database) and a <code>profile_block</code> (a compact English paragraph injected into every AI prompt).</p>
+
+    <div class="io-grid">
+      <div class="io-box">
+        <h5>Input (OnboardingAnswers)</h5>
+        <ul>
+          <li>experience_level: beginner | intermediate | advanced | trader</li>
+          <li>primary_goal: wealth_building | inflation_beat | income | aggressive_growth</li>
+          <li>risk_tolerance: low | medium | high</li>
+          <li>investment_horizon: short | medium | long | very_long</li>
+          <li>preferred_sectors: string[]</li>
+        </ul>
+      </div>
+      <div class="io-box">
+        <h5>Output</h5>
+        <p style="font-size:13px"><strong>profile_record</strong> — database columns</p>
+        <p style="font-size:13px;margin-top:8px"><strong>profile_block</strong> text:</p>
+        <pre style="font-size:11px;padding:10px;margin:0">USER_PROFILE:
+Experience: Beginner investor...
+Goal: Long-term wealth building...
+Risk: Low — prefers capital protection.
+Horizon: 5-10 years.
+Sectors: IT, Banking, Pharma.
+Portfolio: ₹1–10L. Top: INFY, TCS.
+Exposure: IT 45%, Banking 35%.
+Language: Simple English, no jargon.</pre>
+      </div>
+    </div>
+
+    <p>This <code>profile_block</code> is prepended to every AI agent prompt — signal detector, alert priority, daily brief, and chat — giving every Gemini call full awareness of who it's advising.</p>
+  </div>
+</div>
+
+<!-- ═══════════════ 6. INNGEST JOBS ═══════════════ -->
+<h2 id="jobs">6. Inngest Background Jobs</h2>
+
+<div class="section-intro">Inngest wraps all long-running work in durable <code>step.run()</code> blocks. If a step fails, only that step retries — no reprocessing from scratch. Each job has a concurrency limit to protect Gemini's rate limits.</div>
+
+<div class="diagram">
+  <div class="diagram-label">Inngest job triggers & schedule (all times IST)</div>
+  <div class="mermaid">
+gantt
+    dateFormat HH:mm
+    axisFormat %H:%M
+    section Weekdays
+    signal-fetch (every 15min)       :active, 09:15, 3m
+    signal-fetch                     :active, 09:30, 3m
+    signal-fetch                     :active, 09:45, 3m
+    price-sync (4pm close)           :milestone, 16:00, 0m
+    macro-sync (post-close)          :milestone, 18:30, 0m
+    section Morning
+    daily-brief (7:30am)             :milestone, 07:30, 0m
+    section Sunday
+    fundamental-sync (10am)          :milestone, 10:00, 0m
+  </div>
+</div>
+
+<h3>signal-fetch</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge green">Cron: */15 * * * 1-5</span>
+    <span class="badge blue">Every 15 min weekdays</span>
+    <span class="badge purple">concurrency: 1</span>
+  </div>
+  <ol class="flow-steps">
+    <li>Fetch bulk deals, insider trades, block deals from NSE (3 parallel API calls)</li>
+    <li>De-duplicate against existing signals in DB (filter by ticker+date+type)</li>
+    <li>For top 20 new events: <strong>5s delay</strong> between each (rate-limit pacing)</li>
+    <li>Call <strong>signal-detector</strong> agent → get event_type, score, summary</li>
+    <li>INSERT row into <code>signals</code> table</li>
+    <li>SELECT users who hold or watch this ticker (from user_holdings + user_watchlist)</li>
+    <li>For each relevant user: call <strong>alert-priority</strong> agent</li>
+    <li>If should_notify=true: INSERT <code>user_notifications</code> row</li>
+    <li>Fetch user's APNs tokens from <code>user_devices</code></li>
+    <li>Call <code>lib/apns.ts sendPushToMany()</code></li>
+  </ol>
+</div>
+
+<h3>daily-brief</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge green">Cron: 0 2 * * 1-5</span>
+    <span class="badge blue">7:30 AM IST weekdays</span>
+    <span class="badge purple">up to 500 users/run</span>
+  </div>
+  <ol class="flow-steps">
+    <li>Fetch latest <code>macro_indicators</code> row from DB</li>
+    <li>Fetch top 5 signals from past 24 hours (ORDER BY significance_score DESC)</li>
+    <li>SELECT all users WHERE onboarding_completed = true (max 500)</li>
+    <li>For each user: fetch user_holdings + live prices via NSE API</li>
+    <li>If holdings exist: call <code>buildPortfolioContext()</code> (TypeScript math, no AI)</li>
+    <li>Call <strong>daily-brief</strong> agent with macro + signals + portfolio context + profile</li>
+    <li>UPSERT row in <code>daily_briefs</code> (conflict on user_id + date)</li>
+  </ol>
+</div>
+
+<h3>chat-process</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge amber">Event: app/chat.message</span>
+    <span class="badge blue">Triggered by POST /chat</span>
+    <span class="badge purple">concurrency: 5</span>
+  </div>
+  <ol class="flow-steps">
+    <li>Receive event payload: { job_id, user_id, message }</li>
+    <li>Fetch user profile + holdings from Supabase</li>
+    <li>Fetch live prices for all user holdings via NSE API</li>
+    <li>Fetch active signals on holdings (last 7 days, limit 10)</li>
+    <li>Call <code>buildPortfolioContext()</code></li>
+    <li>Extract mentioned tickers from message (simple regex, max 3)</li>
+    <li>For each ticker: fetch NSE announcements + NewsAPI headlines (last 7 days)</li>
+    <li>Call <strong>market-analyst-chat</strong> agent (streaming)</li>
+    <li>Collect all stream chunks into fullText</li>
+    <li>Split on <code>---DIG_DEEPER---</code> → plain + deeper strings</li>
+    <li>UPDATE <code>chat_messages</code>: plain, deeper, status="done", completed_at=now()</li>
+    <li><em>On 429 rate limit error:</em> wait 2s, retry once</li>
+  </ol>
+</div>
+
+<h3>price-sync</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge green">Cron: 0 16 * * 1-5</span>
+    <span class="badge blue">4:00 PM IST weekdays (post-close)</span>
+  </div>
+  <p>Syncs 180 days of OHLCV data for all 45 tracked NSE tickers. Uses NSE's <code>GetQuoteApi</code> endpoint with session cookie spoofing. UPSERT conflict on (ticker, date) — safe to re-run.</p>
+  <p><strong>Tracked tickers:</strong> RELIANCE, TCS, HDFCBANK, INFY, ICICIBANK, HINDUNILVR, BHARTIARTL, ITC, SBIN, BAJFINANCE, KOTAKBANK, AXISBANK, LT, ASIANPAINT, MARUTI, WIPRO, SUNPHARMA, ULTRACEMCO, TITAN, NESTLEIND, and 25 more NSE 500 constituents.</p>
+</div>
+
+<h3>macro-sync</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge green">Cron: 30 12 * * 1-5</span>
+    <span class="badge blue">6:00 PM IST weekdays</span>
+  </div>
+  <p>Fetches Nifty 50 (<code>^NSEI</code>) and Sensex (<code>^BSESN</code>) closing prices from Yahoo Finance. Fetches FII/DII net flows from NSE's <code>/api/fiidiiTradeReact</code> endpoint. UPSERT on today's date — only one row per day.</p>
+</div>
+
+<h3>fundamental-sync</h3>
+<div class="card">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+    <span class="badge green">Cron: 0 10 * * 0</span>
+    <span class="badge blue">10:00 AM IST every Sunday</span>
+    <span class="badge purple">concurrency: 1</span>
+  </div>
+  <p>Fetches PE ratio, ROE, debt/equity, revenue growth, promoter holding, market cap, and sector from Yahoo Finance for all tickers in <code>company_fundamentals</code>. Processes in batches of 20 with 300ms delays to avoid Yahoo rate limits.</p>
+</div>
+
+<!-- ═══════════════ 7. SUPABASE TABLES ═══════════════ -->
+<h2 id="tables">7. Supabase Tables — Complete Schema</h2>
+
+<div class="section-intro">12 tables total. Market data tables are publicly readable. User tables are locked via Row Level Security — users only see their own rows.</div>
+
+<div class="diagram">
+  <div class="diagram-label">Entity relationship diagram</div>
+  <div class="mermaid">
+erDiagram
+    auth_users {
+        uuid id PK
+        string email
+    }
+    user_profiles {
+        uuid id PK
+        string experience_level
+        string primary_goal
+        string risk_tolerance
+        string investment_horizon
+        string[] preferred_sectors
+        string portfolio_size_bucket
+        string[] top_holdings
+        jsonb sector_concentration
+        text profile_block
+        bool onboarding_completed
+    }
+    user_holdings {
+        uuid id PK
+        uuid user_id FK
+        string ticker
+        numeric qty
+        numeric avg_buy_price
+    }
+    user_watchlist {
+        uuid id PK
+        uuid user_id FK
+        string ticker
+        timestamptz added_at
+    }
+    user_devices {
+        uuid id PK
+        uuid user_id FK
+        string apns_token
+        string platform
+    }
+    user_notifications {
+        uuid id PK
+        uuid user_id FK
+        uuid signal_id FK
+        string push_copy
+        string urgency
+        bool opened
+    }
+    daily_briefs {
+        uuid id PK
+        uuid user_id FK
+        date date
+        jsonb brief_json
+        timestamptz viewed_at
+    }
+    chat_messages {
+        uuid id PK
+        uuid user_id FK
+        text message
+        text plain
+        text deeper
+        string status
+    }
+    signals {
+        uuid id PK
+        string ticker
+        string event_type
+        int significance_score
+        text plain_summary
+        text historical_context
+        jsonb raw_data
+        timestamptz detected_at
+    }
+    chart_patterns {
+        uuid id PK
+        string ticker
+        string pattern_name
+        text plain_explanation
+        text what_to_watch
+        numeric historical_win_rate
+        numeric avg_move_pct
+        text horizon_note
+    }
+    stock_prices {
+        string ticker PK
+        date date PK
+        numeric open
+        numeric high
+        numeric low
+        numeric close
+        bigint volume
+    }
+    company_fundamentals {
+        string ticker PK
+        numeric pe
+        numeric roe
+        numeric debt_equity
+        numeric promoter_holding_pct
+        numeric market_cap_cr
+        string sector
+    }
+    macro_indicators {
+        date date PK
+        numeric nifty_close
+        numeric sensex_close
+        numeric fii_net_cr
+        numeric dii_net_cr
+    }
+
+    auth_users ||--|| user_profiles : "extends"
+    user_profiles ||--o{ user_holdings : "has"
+    user_profiles ||--o{ user_watchlist : "watches"
+    user_profiles ||--o{ user_devices : "owns"
+    user_profiles ||--o{ user_notifications : "receives"
+    user_profiles ||--o{ daily_briefs : "gets"
+    user_profiles ||--o{ chat_messages : "sends"
+    signals ||--o{ user_notifications : "triggers"
+  </div>
+</div>
+
+<h3>Market Data Tables (publicly readable)</h3>
+
+<h4>signals</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td>Auto-generated</td></tr>
+  <tr><td>ticker</td><td class="type">TEXT</td><td>NSE symbol e.g. TATAMOTORS</td></tr>
+  <tr><td>event_type</td><td class="type">TEXT</td><td>bulk_deal | insider_buy | insider_sell | pledge_increase | pledge_reduction | promoter_buy | block_deal | qip</td></tr>
+  <tr><td>significance_score</td><td class="type">INTEGER</td><td>0–100, set by signal-detector agent</td></tr>
+  <tr><td>plain_summary</td><td class="type">TEXT</td><td>2-sentence AI summary</td></tr>
+  <tr><td>historical_context</td><td class="type">TEXT</td><td>nullable — AI-generated pattern note</td></tr>
+  <tr><td>raw_data</td><td class="type">JSONB</td><td>Original NSE API response</td></tr>
+  <tr><td>detected_at</td><td class="type">TIMESTAMPTZ</td><td>When signal was processed</td></tr>
+  <tr><td>entry_price</td><td class="type">NUMERIC(18,4)</td><td>Price at detection — for performance tracking</td></tr>
+  <tr><td>perf_1d, perf_7d, perf_30d</td><td class="type">NUMERIC(8,4)</td><td>% return after 1/7/30 days (backfill job)</td></tr>
+  <tr><td>outcome_profitable</td><td class="type">BOOLEAN</td><td>null until 30d elapsed, then true/false</td></tr>
+</table>
+
+<h4>stock_prices</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">ticker + date</td><td class="type">TEXT + DATE</td><td>Composite PK — one row per ticker per day</td></tr>
+  <tr><td>open, high, low, close</td><td class="type">NUMERIC(18,4)</td><td>INR prices</td></tr>
+  <tr><td>volume</td><td class="type">BIGINT</td><td>Shares traded</td></tr>
+</table>
+<div class="callout green"><strong>Reuse:</strong> Read by the iOS chart view (90 days), by the portfolio context builder (to compute PnL), and by the chart pattern agent (last 30 sessions for pattern confirmation).</div>
+
+<h4>company_fundamentals</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">ticker</td><td class="type">TEXT PK</td><td>One row per company, refreshed weekly</td></tr>
+  <tr><td>pe</td><td class="type">NUMERIC</td><td>Price/Earnings ratio</td></tr>
+  <tr><td>roe</td><td class="type">NUMERIC</td><td>Return on Equity (%)</td></tr>
+  <tr><td>debt_equity</td><td class="type">NUMERIC</td><td>Debt/Equity ratio</td></tr>
+  <tr><td>revenue_growth_pct</td><td class="type">NUMERIC</td><td>YoY revenue growth</td></tr>
+  <tr><td>promoter_holding_pct</td><td class="type">NUMERIC</td><td>Promoter stake %</td></tr>
+  <tr><td>pledge_pct</td><td class="type">NUMERIC</td><td>Pledged shares as % of promoter holding</td></tr>
+  <tr><td>market_cap_cr</td><td class="type">NUMERIC</td><td>Market cap in Indian crores (₹10M = 1 crore)</td></tr>
+  <tr><td>sector</td><td class="type">TEXT</td><td>IT | Banking | Pharma | Auto | FMCG | Energy | Infrastructure | Metals</td></tr>
+  <tr><td>updated_at</td><td class="type">TIMESTAMPTZ</td><td>Last sync timestamp</td></tr>
+</table>
+
+<h4>macro_indicators</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">date</td><td class="type">DATE PK</td><td>One row per trading day</td></tr>
+  <tr><td>nifty_close, sensex_close</td><td class="type">NUMERIC(12,2)</td><td>End-of-day index values</td></tr>
+  <tr><td>nifty_change_pct, sensex_change_pct</td><td class="type">DOUBLE PRECISION</td><td>Day-over-day % change</td></tr>
+  <tr><td>fii_net_cr, dii_net_cr</td><td class="type">NUMERIC(14,2)</td><td>Foreign/Domestic Institutional net buy/sell in crores</td></tr>
+  <tr><td>repo_rate</td><td class="type">NUMERIC(6,4)</td><td>RBI repo rate (manual update)</td></tr>
+</table>
+
+<h4>chart_patterns</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td></td></tr>
+  <tr><td>ticker</td><td class="type">TEXT</td><td>NSE symbol</td></tr>
+  <tr><td>pattern_name</td><td class="type">TEXT</td><td>e.g. "Double Top", "Golden Cross", "Head and Shoulders"</td></tr>
+  <tr><td>detected_at</td><td class="type">TIMESTAMPTZ</td><td>When Python scanner detected it</td></tr>
+  <tr><td>plain_explanation</td><td class="type">TEXT</td><td>AI-generated, calibrated to experience level</td></tr>
+  <tr><td>what_to_watch</td><td class="type">TEXT</td><td>Specific price trigger or level to monitor</td></tr>
+  <tr><td>historical_win_rate</td><td class="type">NUMERIC(5,2)</td><td>% (AI-researched)</td></tr>
+  <tr><td>avg_move_pct</td><td class="type">NUMERIC(8,4)</td><td>Average expected price move</td></tr>
+  <tr><td>horizon_note</td><td class="type">TEXT</td><td>Relevance note for user's investment timeline</td></tr>
+</table>
+
+<h3>User Tables (RLS protected)</h3>
+
+<h4>user_profiles</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td>Same UUID as <code>auth.users.id</code></td></tr>
+  <tr><td>experience_level</td><td class="type">TEXT</td><td>beginner | intermediate | advanced | trader</td></tr>
+  <tr><td>primary_goal</td><td class="type">TEXT</td><td>wealth_building | inflation_beat | income | aggressive_growth</td></tr>
+  <tr><td>risk_tolerance</td><td class="type">TEXT</td><td>low | medium | high</td></tr>
+  <tr><td>investment_horizon</td><td class="type">TEXT</td><td>short | medium | long | very_long</td></tr>
+  <tr><td>preferred_sectors</td><td class="type">TEXT[]</td><td>Array of sector names</td></tr>
+  <tr><td>portfolio_size_bucket</td><td class="type">TEXT</td><td>under_1L | 1L_to_10L | above_10L — derived from holdings value</td></tr>
+  <tr><td>top_holdings</td><td class="type">TEXT[]</td><td>Top 3 tickers by current value — auto-updated</td></tr>
+  <tr><td>sector_concentration</td><td class="type">JSONB</td><td>{ "IT": 45.2, "Banking": 32.1 } — auto-updated</td></tr>
+  <tr><td>profile_block</td><td class="type">TEXT</td><td>Compiled paragraph injected into every AI prompt</td></tr>
+  <tr><td>onboarding_completed</td><td class="type">BOOLEAN</td><td>Gate for daily-brief job and full feature access</td></tr>
+</table>
+<div class="callout info"><strong>profile_block reuse:</strong> This compiled text field is the single most reused piece of data. It is injected into 5 of the 7 AI agents every time they run, personalizing every AI output to the specific user. It is rebuilt whenever the user updates their onboarding answers or their holdings change significantly.</div>
+
+<h4>user_holdings</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td></td></tr>
+  <tr><td class="fk">user_id</td><td class="type">UUID FK</td><td>→ user_profiles(id) ON DELETE CASCADE</td></tr>
+  <tr><td>ticker</td><td class="type">TEXT</td><td>NSE symbol</td></tr>
+  <tr><td>qty</td><td class="type">NUMERIC(18,4)</td><td>Number of shares held</td></tr>
+  <tr><td>avg_buy_price</td><td class="type">NUMERIC(18,4)</td><td>Volume-weighted average purchase price in ₹</td></tr>
+  <tr><td>updated_at</td><td class="type">TIMESTAMPTZ</td><td>Last modification time</td></tr>
+</table>
+
+<h4>daily_briefs</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td></td></tr>
+  <tr><td class="fk">user_id</td><td class="type">UUID FK</td><td>→ user_profiles(id)</td></tr>
+  <tr><td>date</td><td class="type">DATE</td><td>UNIQUE constraint with user_id</td></tr>
+  <tr><td>brief_json</td><td class="type">JSONB</td><td>{ opening, market_snapshot, fii_dii, top_signal, portfolio_update, watch_today }</td></tr>
+  <tr><td>viewed_at</td><td class="type">TIMESTAMPTZ</td><td>null until user opens the brief; used for "unread" badge</td></tr>
+</table>
+
+<h4>chat_messages</h4>
+<table class="db-table">
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td class="pk">id</td><td class="type">UUID PK</td><td>Also serves as job_id for polling</td></tr>
+  <tr><td class="fk">user_id</td><td class="type">UUID</td><td>Caller's user ID</td></tr>
+  <tr><td>message</td><td class="type">TEXT</td><td>User's question</td></tr>
+  <tr><td>plain</td><td class="type">TEXT</td><td>Layer 1 summary (null until done)</td></tr>
+  <tr><td>deeper</td><td class="type">TEXT</td><td>Layer 2 analysis (null until done)</td></tr>
+  <tr><td>status</td><td class="type">TEXT</td><td>pending → done | error</td></tr>
+  <tr><td>created_at</td><td class="type">TIMESTAMPTZ</td><td>Message submitted time</td></tr>
+  <tr><td>completed_at</td><td class="type">TIMESTAMPTZ</td><td>AI response completed time</td></tr>
+</table>
+
+<!-- ═══════════════ 8. ROW LEVEL SECURITY ═══════════════ -->
+<h2 id="rls">8. Row-Level Security</h2>
+
+<div class="diagram">
+  <div class="mermaid">
+flowchart TB
+    subgraph Public ["🌐 Public (anon key readable)"]
+        S[signals] & SP[stock_prices] & CF[company_fundamentals]
+        MI[macro_indicators] & CP[chart_patterns]
+    end
+    subgraph Protected ["🔒 RLS Protected (own rows only)"]
+        UP[user_profiles] & UH[user_holdings] & UW[user_watchlist]
+        UD[user_devices] & UN[user_notifications] & DB[daily_briefs] & CM[chat_messages]
+    end
+    subgraph Backend ["⚙️ Backend (service role — bypasses RLS)"]
+        BE[Vercel Jobs & Routes]
+    end
+    IOS[iOS App] -->|anon JWT| Public
+    IOS -->|user JWT| Protected
+    BE -->|service_role key| Public
+    BE -->|service_role key| Protected
+  </div>
+</div>
+
+<p>RLS policies on all user tables follow the same pattern:</p>
+<pre>
+<span class="c">-- Example: user_holdings</span>
+CREATE POLICY <span class="s">"users_own_holdings"</span> ON user_holdings
+  FOR ALL USING (auth.uid() = user_id);
+</pre>
+<p>The iOS app can directly query <code>signals</code>, <code>stock_prices</code>, <code>chart_patterns</code>, <code>company_fundamentals</code>, and <code>macro_indicators</code> with the anon key. The backend uses the service-role key for all writes and cross-user operations (like the daily-brief job iterating all users).</p>
+
+<!-- ═══════════════ 9. DATA LIFECYCLE ═══════════════ -->
+<h2 id="datalife">9. Data Lifecycle — How Data Is Stored & Reused</h2>
+
+<div class="diagram">
+  <div class="diagram-label">Data reuse across the system</div>
+  <div class="mermaid">
+flowchart LR
+    NSE --> SP[stock_prices\n180 days OHLCV]
+    NSE --> SIG[signals\nevent + AI score]
+    YF[Yahoo Finance] --> MI[macro_indicators\ndaily Nifty/Sensex/FII]
+    YF --> CF[company_fundamentals\nweekly PE/ROE/sector]
+    PY[Python TA-Lib\nscanner] --> CP[chart_patterns\nwith AI explanation]
+
+    SP -->|portfolio PnL calc| PC[Portfolio Context]
+    SP -->|iOS chart view| IOS
+    SIG -->|daily brief input| DA[Daily Brief Agent]
+    SIG -->|chat context| CA[Chat Agent]
+    SIG -->|alert priority| APA[Alert Priority Agent]
+    MI --> DA
+    CF -->|sector lookup| PC
+    CF -->|fundamentals strip| IOS
+    CP -->|watchlist + portfolio| IOS
+
+    PC --> DA
+    PC --> CA
+    PC -->|enriched holdings| IOS
+    UP[user_profiles\nprofile_block] --> DA
+    UP --> CA
+    UP --> APA
+    UP --> SDA[Signal Detector Agent]
+  </div>
+</div>
+
+<h3>Signal — full lifecycle</h3>
+<ol class="flow-steps">
+  <li><strong>Origin:</strong> NSE API returns bulk deal / insider trade JSON every 15 minutes</li>
+  <li><strong>Detection:</strong> signal-detector agent scores it (0–100), classifies event_type, writes plain_summary</li>
+  <li><strong>Storage:</strong> INSERT into <code>signals</code> table with raw_data, score, summary, detected_at</li>
+  <li><strong>Alert:</strong> alert-priority agent checks each user's holdings/watchlist → push notification if relevant</li>
+  <li><strong>Brief:</strong> Next morning, top 5 signals of the past 24h are included in every user's daily brief</li>
+  <li><strong>Chat:</strong> Active signals on user's holdings are included in every chat session as context</li>
+  <li><strong>Radar feed:</strong> iOS app queries <code>GET /signals</code> to display paginated signal feed</li>
+  <li><strong>Performance tracking:</strong> Backfill job (manual) checks perf_1d/7d/30d after respective periods</li>
 </ol>
 
+<h3>profile_block — full lifecycle</h3>
+<ol class="flow-steps">
+  <li><strong>Created:</strong> profile-builder agent converts onboarding answers → compact English paragraph</li>
+  <li><strong>Stored:</strong> Saved as <code>profile_block TEXT</code> column in user_profiles</li>
+  <li><strong>Updated:</strong> Rebuilt whenever user updates their onboarding answers or portfolio_size_bucket changes</li>
+  <li><strong>Injected:</strong> Every AI agent call fetches <code>getProfileWithBlock(userId)</code> and prepends profile_block to the system prompt</li>
+  <li><strong>Result:</strong> The same signal scored a 45 for a high-risk trader might score 78 for a low-risk beginner holding the stock — because the profile_block changes the AI's evaluation context</li>
+</ol>
 
-<h2>7. Critical Architectural Decisions</h2>
-<h3>A. Manual Math vs AI Hallucinations</h3>
-<p>During development, the AI was originally tasked with calculating the user's Total Portfolio Value, PnL percentages, and Sector Concentration by receiving a raw array of holdings and historical prices. This frequently resulted in "Invalid JSON" truncation errors or mathematically incorrect hallucinations. <br>
-<strong>The Solution:</strong> The <code>buildPortfolioContext</code> pipeline was rewritten in pure TypeScript. The backend now calculates precise INR values, exact percentages, and aggregates sector weightings iteratively. These <em>perfect</em> mathematical figures are then passed <em>into</em> the AI's prompt as context. This ensures absolute trust in the numbers.</p>
+<!-- ═══════════════ 10. iOS APP ═══════════════ -->
+<h2 id="ios-arch">10. iOS App Architecture</h2>
 
-<h3>B. Inngest Step Implementation for Scalability</h3>
-<p>Processing a sudden influx of 40 market signals against 100 users requires thousands of AI verifications. A standard Vercel function dies rigidly at 60 seconds, which would silently crash the pipeline. By wrapping the core evaluation logic in <code>step.run()</code>, Inngest treats each signal processing unit as an independent, durable execution chunk. If a timeout occurs, Inngest simply pauses and restarts at the exact signal where the failure occurred.</p>
+<div class="diagram">
+  <div class="mermaid">
+flowchart TB
+    subgraph Entry ["App Entry"]
+        APP[InvestorAppApp]
+        APP -->|isInitialLoading| SV[SplashView]
+        APP -->|!isAuthenticated| LV[LoginView]
+        APP -->|!isOnboarded| OV[OnboardingView]
+        APP -->|ready| MT[MainTabView]
+    end
+    subgraph State ["Global State"]
+        AS[AppState\n@StateObject singleton]
+        AS --> isAuth[isAuthenticated]
+        AS --> profile[profile: UserProfile?]
+        AS --> isOnboard[isOnboarded]
+        AS --> loading[isInitialLoading]
+    end
+    subgraph Network ["Network Layer"]
+        AC[APIClient\nsingleton]
+        AC --> req[request&lt;T&gt;\nauto-retry on 401]
+        AC --> auth[JWT Bearer header]
+    end
+    subgraph Push ["Push Notifications"]
+        PM[PushManager]
+        PM --> perm[requestPermission]
+        PM --> reg[registerDeviceToken]
+        PM --> nav[broadcast .openSignal]
+    end
+    APP --> AS
+    AS --> AC
+    APP --> PM
+  </div>
+</div>
 
-<h3>C. The Two-Layer Chat Abstraction</h3>
-<p>Standard LLM wrappers in financial apps typically produce massive walls of text that are exhausting to read. To deliver an executive, "concierge" feel, the Stoqk backend forces the AI to construct its answer around a <code>---DIG_DEEPER---</code> string marker. The Node.js backend splits the response on this marker before saving it to the database. The SwiftUI iOS application is entirely ignorant of this process; it simply receives a <code>plain</code> string and a <code>deeper</code> string, allowing for instantaneous, clean UI updates where the complex analytical breakdown is hidden behind an expandable disclosure group.</p>
+<h3>MainTabView — 5 tabs</h3>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>📅 Today</h3>
+    <p>Daily brief sections (opening, market snapshot, FII/DII, top signal, portfolio update, watch today). Macro chips (Nifty, Sensex). Active signals on user's holdings.</p>
+    <p><strong>APIs:</strong> <code>GET /briefs/today</code>, <code>GET /briefs/macro</code>, <code>POST /signals/for-tickers</code></p>
+  </div>
+  <div class="card">
+    <h3>📡 Radar</h3>
+    <p>Paginated market signal feed. Filter chips for event type (insider_buy, bulk_deal, etc.) and minimum score. Each signal shows ticker, event badge, score badge, and expandable summary.</p>
+    <p><strong>APIs:</strong> <code>GET /signals</code> paginated</p>
+  </div>
+  <div class="card">
+    <h3>💼 Portfolio</h3>
+    <p>Holdings list with live prices, unrealised PnL per stock and total. Expandable signals & chart patterns per holding. Total value, top gainer/loser summary.</p>
+    <p><strong>APIs:</strong> <code>GET /holdings</code>, <code>POST /signals/for-tickers</code>, <code>POST /patterns/for-tickers</code></p>
+  </div>
+  <div class="card">
+    <h3>💬 Ask</h3>
+    <p>Chat interface. Suggested question chips. User message → backend job_id → polling → two-layer response. Layer 1 shown immediately; Layer 2 behind "Dig Deeper" disclosure.</p>
+    <p><strong>APIs:</strong> <code>POST /chat</code>, <code>GET /chat/result/:id</code>, <code>GET /chat/suggestions</code></p>
+  </div>
+  <div class="card">
+    <h3>👁 Watchlist</h3>
+    <p>Monitored stocks with live price, today's change %, and detected chart patterns. Add/remove tickers. Each pattern shows win rate, avg move, and plain explanation.</p>
+    <p><strong>APIs:</strong> <code>GET /watchlist</code>, <code>POST /watchlist</code>, <code>DELETE /watchlist/:ticker</code></p>
+  </div>
+</div>
+
+<!-- ═══════════════ 11. USER FLOWS ═══════════════ -->
+<h2 id="ios-screens">11. User Flows</h2>
+
+<h3>Onboarding flow</h3>
+<div class="diagram">
+  <div class="mermaid">
+flowchart LR
+    A[LoginView\nEmail + Password] -->|Supabase Auth| B[OnboardingView\nExperience + Goal\nRisk + Horizon\nSectors]
+    B --> C[PortfolioInputView\nAdd holdings]
+    C -->|POST /profile/onboarding| D[Backend builds\nprofile_block]
+    D -->|UPSERT user_profiles| E[MainTabView]
+  </div>
+</div>
+
+<h3>Push notification → signal detail flow</h3>
+<ol class="flow-steps">
+  <li>APNs delivers push: "Block deal: INFY ₹450Cr by LIC. Score: 82"</li>
+  <li>User taps notification — PushManager receives <code>didReceive response</code></li>
+  <li>PushManager posts <code>NSNotification(.openSignal, object: signalId)</code></li>
+  <li>RadarView observes notification, navigates to signal detail sheet</li>
+  <li>Signal detail shows full plain_summary + historical_context + raw deal data</li>
+</ol>
+
+<h3>Token refresh flow</h3>
+<ol class="flow-steps">
+  <li>APIClient makes any request — backend returns 401</li>
+  <li>APIClient calls <code>AppState.refreshTokenIfNeeded()</code></li>
+  <li>AppState POSTs refresh_token to <code>Supabase Auth /token?grant_type=refresh_token</code></li>
+  <li>Supabase returns new access_token</li>
+  <li>AppState stores new token in UserDefaults + updates APIClient headers</li>
+  <li>APIClient automatically retries the original request</li>
+</ol>
+
+<!-- ═══════════════ 12. DECISIONS ═══════════════ -->
+<h2 id="decisions">12. Key Architectural Decisions</h2>
+
+<div class="card">
+  <h3>A. TypeScript math, not AI math</h3>
+  <p>The AI was originally asked to compute portfolio total value, PnL, and sector concentration from raw holdings arrays. It frequently hallucinated wrong totals, misapplied cost basis, or truncated the JSON mid-response.</p>
+  <p><strong>Decision:</strong> <code>buildPortfolioContext()</code> is pure TypeScript arithmetic — deterministic, testable, exact. These verified numbers are then injected as read-only facts into agent prompts. The AI only interprets, never computes.</p>
+</div>
+
+<div class="card">
+  <h3>B. Inngest steps instead of monolithic functions</h3>
+  <p>Processing 40 signals × 100 users = ~4,000 AI calls in one run. A single Vercel function times out at 60 seconds and leaves no recovery point.</p>
+  <p><strong>Decision:</strong> Each signal evaluation is wrapped in its own <code>step.run()</code>. If Gemini rate-limits at signal #23, Inngest pauses, waits, and resumes at signal #23. The first 22 are not re-processed. The 5-second delay between signals also spreads load naturally.</p>
+</div>
+
+<div class="card">
+  <h3>C. Two-layer chat response</h3>
+  <p>Financial LLM answers tend to be walls of text. Most users want a fast answer, not a full analysis every time.</p>
+  <p><strong>Decision:</strong> The chat agent is forced to structure every response around the exact string <code>---DIG_DEEPER---</code>. The backend splits on this marker. The iOS app receives <code>plain</code> (1–2 sentences) and <code>deeper</code> (full analysis). Layer 1 is shown immediately; Layer 2 is behind a "Dig Deeper" disclosure group. The iOS app never needs to know how the split happens.</p>
+</div>
+
+<div class="card">
+  <h3>D. NSE session cookie spoofing</h3>
+  <p>NSE India's APIs return 403/404 to direct server requests. They require a browser-like session.</p>
+  <p><strong>Decision:</strong> <code>lib/nse.ts</code> implements an <code>ensureNSESession()</code> function that fetches the NSE homepage first to obtain a valid session cookie, then reuses it for up to 5 minutes. The session is cached in memory between requests in the same Vercel function invocation.</p>
+</div>
+
+<div class="card">
+  <h3>E. profile_block as a compiled string</h3>
+  <p>Passing structured JSON for the user profile into every prompt led to the AI occasionally ignoring nested fields or treating them inconsistently.</p>
+  <p><strong>Decision:</strong> The profile is compiled once into a human-readable paragraph (<code>profile_block</code>) and stored in the database. This pre-rendered text is injected directly into system prompts. The AI parses natural language more reliably than it interprets arbitrary JSON schemas.</p>
+</div>
+
+<div class="card">
+  <h3>F. Polling over WebSockets for chat</h3>
+  <p>Real-time WebSocket connections complicate serverless deployments — Vercel functions are stateless and short-lived.</p>
+  <p><strong>Decision:</strong> The chat endpoint immediately returns a <code>job_id</code>. The iOS app polls <code>GET /chat/result/:id</code> every 1.5 seconds for up to 60 seconds. This is simple, reliable, and works within Vercel's execution model. The polling loop stops the moment status is "done" or "error".</p>
+</div>
+
+<!-- ═══════════════ 13. EXTERNAL SERVICES ═══════════════ -->
+<h2 id="external">13. External Services & Environment</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h3>Google Gemini 2.0 Flash</h3>
+    <p>All 7 AI agents. <code>GEMINI_API_KEY</code>. SDK: <code>@google/generative-ai</code>. Both <code>FAST_MODEL</code> and <code>SMART_MODEL</code> point to <code>gemini-2.0-flash</code>. Used for: runAgent (JSON), streamAgent (streaming text).</p>
+  </div>
+  <div class="card">
+    <h3>Supabase</h3>
+    <p><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SUPABASE_ANON_KEY</code>. Service role for all backend writes. Anon key for auth validation in middleware.</p>
+  </div>
+  <div class="card">
+    <h3>Inngest</h3>
+    <p><code>INNGEST_SIGNING_KEY</code>, <code>INNGEST_EVENT_KEY</code>. Webhook at <code>/api/inngest</code>. Manages cron schedule, event triggers, concurrency, and retries.</p>
+  </div>
+  <div class="card">
+    <h3>Apple APNs</h3>
+    <p><code>APNS_KEY_ID</code>, <code>APNS_TEAM_ID</code>, <code>APNS_PRIVATE_KEY</code> (.p8 contents), <code>APNS_BUNDLE_ID</code>, <code>APNS_ENV</code>. SDK: <code>apn</code> npm package. Dynamic import to minimize cold-start cost.</p>
+  </div>
+  <div class="card">
+    <h3>NSE India APIs</h3>
+    <p>No key required. Requires browser-session spoofing. Endpoints: bulk deals, insider trades (PIT), block deals, OHLCV (GetQuoteApi), live quote, FII/DII flows, corporate announcements.</p>
+  </div>
+  <div class="card">
+    <h3>Yahoo Finance</h3>
+    <p>SDK: <code>yahoo-finance2</code>. Symbols: <code>^NSEI</code> (Nifty 50), <code>^BSESN</code> (Sensex). Company fundamentals: <code>quoteSummary()</code> with financialData + defaultKeyStatistics modules.</p>
+  </div>
+  <div class="card">
+    <h3>NewsAPI</h3>
+    <p><code>NEWS_API_KEY</code>. Used in chat agent to fetch recent headlines for mentioned tickers. Free tier: 100 requests/day. Endpoints: <code>/v2/everything</code> with company name + ticker query.</p>
+  </div>
+  <div class="card">
+    <h3>Upstox API</h3>
+    <p><code>UPSTOX_ACCESS_TOKEN</code> (optional). Used for batch live price quotes. Falls back to NSE <code>/api/quote-equity</code> if token not available.</p>
+  </div>
+</div>
+
+<h3>Internal API Key</h3>
+<p>The <code>INTERNAL_API_KEY</code> is a shared secret between the backend and the Python pattern scanner service. Internal routes check for <code>x-internal-key</code> header. This prevents the pattern analysis endpoint from being called by external actors.</p>
 
 <hr>
-<p style="text-align: center; color: #666; font-size: 13px; margin-top: 40px;">Stoqk System Architecture • Generated 2026</p>
+
+<div class="diagram">
+  <div class="diagram-label">Complete system at a glance</div>
+  <div class="mermaid">
+mindmap
+  root((Stoqk))
+    iOS App
+      SwiftUI
+      AppState singleton
+      APIClient + JWT
+      PushManager
+      5 tabs
+        Today / Brief
+        Radar / Signals
+        Portfolio
+        Ask / Chat
+        Watchlist
+    Backend Vercel
+      Hono framework
+      9 REST route modules
+      Auth middleware
+      7 AI Agents
+        Signal Detector
+        Alert Priority
+        Daily Brief
+        Portfolio Context
+        Market Analyst Chat
+        Chart Pattern
+        Profile Builder
+      5 Inngest Jobs
+        signal-fetch every 15min
+        daily-brief 7.30am
+        price-sync 4pm
+        macro-sync 6pm
+        fundamental-sync weekly
+    Supabase
+      13 tables
+      RLS policies
+      Auth service
+    External
+      Gemini 2.0 Flash
+      NSE India APIs
+      Yahoo Finance
+      NewsAPI
+      Apple APNs
+      Inngest
+  </div>
+</div>
+
+<p style="text-align:center;color:var(--ink3);font-size:13px;margin-top:48px;padding-bottom:48px">Stoqk Architecture Documentation — Updated March 2026</p>
+
+</div>
+</div>
 
 </body>
 </html>

@@ -103,6 +103,17 @@ struct AskView: View {
             .navigationTitle("Ask")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                if !vm.messages.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            vm.messages = []
+                            Haptic.light()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                                .foregroundStyle(Color.brand)
+                        }
+                    }
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") {
