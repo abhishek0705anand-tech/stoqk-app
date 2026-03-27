@@ -117,12 +117,27 @@ export const signalFetchJob = inngest.createFunction(
         if (!profilesResult.data?.length) return;
         const users = profilesResult.data;
 
-        // 1. Detect signal with primary AI pass
+        // 1. De-duplicate — skip if we already processed this event today
+        const ticker = event.symbol?.toUpperCase();
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: existing } = await supabase
+          .from("signals")
+          .select("id")
+          .eq("ticker", ticker)
+          .eq("event_type", classifyRawEvent(event))
+          .gte("detected_at", todayStart.toISOString())
+          .maybeSingle();
+
+        if (existing) return; // already processed today — skip AI call
+
+        // 2. Detect signal with primary AI pass
         const signalOutput = await detectSignal(event, users[0] as any);
         const { data: savedSignal } = await supabase
           .from("signals")
           .insert({
-            ticker: event.symbol?.toUpperCase(),
+            ticker,
             event_type: signalOutput.event_type || classifyRawEvent(event),
             significance_score: signalOutput.significance_score,
             plain_summary: signalOutput.plain_summary,
