@@ -101,23 +101,33 @@ export const signalFetchJob = inngest.createFunction(
       return [...b, ...i, ...bl];
     });
 
+    // No new events from NSE — nothing to do this run
     if (!allEvents.length) return { processed: 0 };
 
-    // Process only top 20 to stay safe, one by one as individual steps
+    // NSE returns the full day's deal list on every poll, so we cap at 20 per run
+    // and rely on the de-duplication check below to avoid re-processing events
+    // that were already scored in an earlier run today.
     for (const event of allEvents.slice(0, 20)) {
+      // Each event runs as an isolated Inngest step so a failure or timeout
+      // on one signal doesn't block or re-run the others.
       await step.run(`process-signal-${event.symbol}-${Date.now()}`, async () => {
-        // 5-second pacing delay to avoid 429s
+        // Pacing delay — Gemini has a rate limit; spreading calls over time
+        // avoids 429 errors when multiple signals arrive at once.
         await new Promise(r => setTimeout(r, 5000));
 
         const profilesResult = await supabase
           .from("user_profiles")
           .select("id, profile_block")
           .eq("onboarding_completed", true);
-        
+
         if (!profilesResult.data?.length) return;
         const users = profilesResult.data;
 
-        // 1. De-duplicate — skip if we already processed this event today
+        // ── Step 1: De-duplicate ──────────────────────────────────────────
+        // NSE's bulk-deal/insider-trade endpoints return the entire day's list
+        // on every request, not just new entries. Without this check, the same
+        // event would be re-scored by Gemini on every 15-minute poll, creating
+        // duplicate signals and burning ~9,600 unnecessary AI calls per day.
         const ticker = event.symbol?.toUpperCase();
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -130,9 +140,12 @@ export const signalFetchJob = inngest.createFunction(
           .gte("detected_at", todayStart.toISOString())
           .maybeSingle();
 
-        if (existing) return; // already processed today — skip AI call
+        if (existing) return; // already scored today — skip Gemini call
 
-        // 2. Detect signal with primary AI pass
+        // ── Step 2: Score the signal with AI ─────────────────────────────
+        // Uses the first onboarded user's profile as a representative context
+        // for the signal-detector agent. The alert-priority agent (below) then
+        // re-evaluates relevance individually for each affected user.
         const signalOutput = await detectSignal(event, users[0] as any);
         const { data: savedSignal } = await supabase
           .from("signals")
@@ -149,7 +162,10 @@ export const signalFetchJob = inngest.createFunction(
 
         if (!savedSignal) return;
 
-        // 2. Alert users — but ONLY those who hold/watch this ticker
+        // ── Step 3: Notify relevant users ────────────────────────────────
+        // Only users who hold or watch this specific ticker get an alert-priority
+        // check. This keeps AI calls proportional to actual user interest rather
+        // than running against every user in the system for every signal.
         const relevantUsersRes = await supabase
           .from("user_holdings")
           .select("user_id")
